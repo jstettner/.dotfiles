@@ -1,7 +1,7 @@
 # Development configuration
 
 Private chezmoi configuration for Pi, Herdr, and Neovim on macOS/Linux.
-The local checkout lives at `~/src/dotfiles`.
+
 Only configuration is deployed. Authentication, trust decisions, histories,
 sockets, logs, installed binaries, and downloaded plugins stay machine-local.
 
@@ -118,10 +118,13 @@ chezmoi apply
 you review first. Capture and commit local edits before pulling to avoid
 losing them. There is no automatic two-way synchronization.
 
-## Existing Neovim repository
+## Neovim ownership
 
-The original `~/.config/nvim/.git` checkout is preserved and never deployed.
-This repository includes a snapshot, not a submodule. Use this repository as
-the cross-machine source of truth; commits/pulls in the old `jstettner/nvim`
-repository do not automatically update it. Run the capture script after any
-intentional changes made via that checkout.
+Neovim configuration is tracked directly in `dot_config/nvim` in this repo,
+not as a submodule or a separate checkout. Chezmoi deploys it to
+`~/.config/nvim`; after editing there, use the capture/commit workflow above.
+The old `jstettner/nvim` repository is no longer used.
+
+The original machine's Git metadata was moved out of `~/.config/nvim` into
+`~/.local/state/dotfiles/backups/nvim-20260917-233746/.git`, preserving its
+history without leaving a competing repository in the live configuration.
