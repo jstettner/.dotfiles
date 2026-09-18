@@ -1,0 +1,15 @@
+.DS_Store
+*.log
+*.sock
+.env
+.env.*
+auth.json
+trust.json
+models-store.json
+node_modules/
+sessions/
+dot_pi/agent/npm/
+dot_pi/agent/git/
+dot_config/herdr/plugins/
+dot_config/herdr/plugins.json
+dot_config/herdr/session.json

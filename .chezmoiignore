@@ -1,0 +1,18 @@
+README.md
+scripts/**
+
+# Credentials and machine-local/runtime state must never be deployed.
+.pi/agent/auth.json
+.pi/agent/trust.json
+.pi/agent/sessions/**
+.pi/agent/npm/**
+.pi/agent/git/**
+.pi/agent/models-store.json
+.pi/agent/extensions/herdr-agent-state.ts
+.config/herdr/plugins/**
+.config/herdr/plugins.json
+.config/herdr/session.json
+.config/herdr/*.log
+.config/herdr/*.sock
+.config/nvim/.git/**
+.config/nvim/*.log

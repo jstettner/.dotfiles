@@ -1,0 +1,19 @@
+onboarding = false
+
+[worktrees]
+directory = "~/wt/ambral"
+
+[keys]
+focus_agent = "prefix+alt+1..9"
+
+[[keys.command]]
+key = "prefix+o"
+type = "plugin_action"
+command = "annotate.open"
+description = "review documents"
+
+[[keys.command]]
+key = "prefix+shift+o"
+type = "plugin_action"
+command = "annotate.last"
+description = "review agent replies"
