@@ -1,5 +1,8 @@
 onboarding = false
 
+[ui]
+mouse_capture = true
+
 [worktrees]
 directory = "~/wt/ambral"
 
