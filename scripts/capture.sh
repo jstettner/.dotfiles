@@ -5,6 +5,7 @@ set -euo pipefail
 chezmoi add --secrets error \
   "$HOME/.pi/agent/settings.json" \
   "$HOME/.pi/agent/extensions/label.ts" \
+  "$HOME/.pi/agent/extensions/carry/index.ts" \
   "$HOME/.config/herdr/config.toml" \
   "$HOME/.config/nvim/init.lua" \
   "$HOME/.config/nvim/lua" \

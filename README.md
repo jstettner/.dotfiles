@@ -71,15 +71,22 @@ may drop plugin actions. Using server bindings avoids that issue.
 
 ## What is managed
 
-- Pi `settings.json` and custom `/label` extension.
+- Pi `settings.json` and custom `/label` and `/carry` extensions.
 - Pi `keybindings.json` if you create one and run the capture script (the
   initial machine uses Pi's default bindings, so none existed).
 - Herdr `config.toml`, including focus/review keybindings.
 - Neovim Lua configuration and both plugin lockfiles.
 
 The Herdr-generated `herdr-agent-state.ts` extension is intentionally installed
-by Herdr, not tracked. The small custom Pi extension is tracked directly here;
+by Herdr, not tracked. Custom Pi extensions are tracked directly here;
 no separate package repository is required.
+
+`/carry` captures the latest assistant text, opens Pi's native tree picker,
+and inserts the text verbatim as a branch summary at the selected position.
+It makes no model call, leaves the clipboard unchanged, and waits for your
+next prompt. The original branch is preserved. Selecting a user message
+branches before it and restores that prompt to the editor, as with `/tree`.
+Run `/reload` after installing or updating the extension.
 
 Herdr's worktree path is `~/wt/ambral`, portable across home directories.
 Neovim discovers Obsidian vaults locally; on a headless machine optionally set
