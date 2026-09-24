@@ -8,7 +8,7 @@ directory = "~/wt/ambral"
 
 [keys]
 goto = "prefix+alt+g"
-focus_agent = "prefix+alt+1..9"
+focus_agent = "alt+1..9"
 navigate_workspace_up = "k"
 navigate_workspace_down = "j"
 navigate_pane_up = "up"
