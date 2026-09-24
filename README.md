@@ -2,21 +2,22 @@
 
 Private chezmoi configuration for Pi, Herdr, and Neovim on macOS/Linux.
 
-Only configuration is deployed. Authentication, trust decisions, histories,
-sockets, logs, installed binaries, and downloaded plugins stay machine-local.
+Configuration and custom local plugin source are deployed. Authentication,
+trust decisions, histories, sockets, logs, installed binaries, and downloaded
+plugins stay machine-local.
 
 ## New machine
 
 Install Git, chezmoi, Node.js/npm (Node 24 recommended), Neovim **0.12.4 or
 newer**, Herdr (currently **0.9.1**), GitHub CLI, ripgrep, a C compiler,
-make, curl, unzip, and the tree-sitter CLI. Use current upstream packages if
-your Linux distribution ships an older Neovim. Install Herdr using the
+make, curl, unzip, the tree-sitter CLI, Python 3, and Go **1.24.2 or newer**.
+Use current upstream packages if your Linux distribution ships an older Neovim. Install Herdr using the
 instructions at https://herdr.dev for your server's OS/architecture.
 
 On macOS, most prerequisites are available with:
 
 ```sh
-brew install chezmoi git node neovim gh ripgrep tree-sitter
+brew install chezmoi git node neovim gh ripgrep tree-sitter python go
 # C compiler: xcode-select --install (if not already installed)
 ```
 
@@ -46,9 +47,10 @@ bash "$(chezmoi source-path)/scripts/setup-plugins.sh"
 ```
 
 The setup script explicitly installs Herdr's generated Pi integration,
-reinstalls Annotate at the recorded commit for this machine's architecture,
-and restores Neovim plugins from `lazy-lock.json`. It is not an automatic
-chezmoi hook: normal config updates never run installers unexpectedly.
+reinstalls Annotate and Arrange at their recorded commits for this machine's
+architecture, links the custom worktree-label plugin, and restores Neovim
+plugins from `lazy-lock.json`. It is not an automatic chezmoi hook: normal
+config updates never run installers unexpectedly.
 Mason provisions the configured Lua/TypeScript language servers on Neovim
 startup. Project-local TypeScript dependencies must be installed per project.
 Run `:checkhealth` in Neovim after installation.
@@ -74,7 +76,8 @@ may drop plugin actions. Using server bindings avoids that issue.
 - Pi `settings.json` and custom `/label` and `/carry` extensions.
 - Pi `keybindings.json` if you create one and run the capture script (the
   initial machine uses Pi's default bindings, so none existed).
-- Herdr `config.toml`, including focus/review keybindings.
+- Herdr `config.toml`, including focus/review/pane-move keybindings.
+- Herdr's custom `local.worktree-labels` plugin source and tests.
 - Neovim Lua configuration and both plugin lockfiles.
 
 The Herdr-generated `herdr-agent-state.ts` extension is intentionally installed
@@ -89,6 +92,14 @@ branches before it and restores that prompt to the editor, as with `/tree`.
 Run `/reload` after installing or updating the extension.
 
 Herdr's worktree path is `~/wt/ambral`, portable across home directories.
+`prefix + g` opens Arrange's pane destination picker; the original Goto picker
+is on `prefix + alt + g`. Git-backed spaces automatically combine their panes'
+short worktree branch names, e.g. `loader-fix * bench-to-tailwind`. Manual space
+names are replaced on refresh. See the deployed plugin's
+`~/.config/herdr/local-plugins/worktree-labels/README.md` for details and tests.
+On existing machines, run `scripts/setup-plugins.sh` after applying this update
+to install/link the new plugins; reloading configuration alone is not enough.
+
 Neovim discovers Obsidian vaults locally; on a headless machine optionally set
 `OBSIDIAN_VAULT` to an existing vault directory. Vault contents are not synced.
 Clipboard support depends on the terminal and OS; a headless server does not

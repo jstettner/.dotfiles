@@ -14,5 +14,9 @@ scripts/**
 .config/herdr/session.json
 .config/herdr/*.log
 .config/herdr/*.sock
+.config/herdr/config.toml.before-*
+.config/herdr/local-plugins/**/__pycache__/**
+.config/herdr/local-plugins/**/*.pyc
+.config/herdr/local-plugins/worktree-labels/labels-before.json
 .config/nvim/.git/**
 .config/nvim/*.log

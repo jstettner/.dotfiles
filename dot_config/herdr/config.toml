@@ -7,6 +7,7 @@ mouse_capture = true
 directory = "~/wt/ambral"
 
 [keys]
+goto = "prefix+alt+g"
 focus_agent = "prefix+alt+1..9"
 navigate_workspace_up = "k"
 navigate_workspace_down = "j"
@@ -24,3 +25,9 @@ key = "prefix+shift+o"
 type = "plugin_action"
 command = "annotate.last"
 description = "review agent replies"
+
+[[keys.command]]
+key = "prefix+g"
+type = "plugin_action"
+command = "herdr-arrange.open-tree"
+description = "move pane to another tab or space"

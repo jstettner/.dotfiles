@@ -13,3 +13,7 @@ dot_pi/agent/git/
 dot_config/herdr/plugins/
 dot_config/herdr/plugins.json
 dot_config/herdr/session.json
+dot_config/herdr/config.toml.before-*
+dot_config/herdr/local-plugins/**/__pycache__/
+dot_config/herdr/local-plugins/**/*.pyc
+dot_config/herdr/local-plugins/worktree-labels/labels-before.json

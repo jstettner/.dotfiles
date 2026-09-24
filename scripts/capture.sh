@@ -7,6 +7,11 @@ chezmoi add --secrets error \
   "$HOME/.pi/agent/extensions/label.ts" \
   "$HOME/.pi/agent/extensions/carry/index.ts" \
   "$HOME/.config/herdr/config.toml" \
+  "$HOME/.config/herdr/local-plugins/worktree-labels/herdr-plugin.toml" \
+  "$HOME/.config/herdr/local-plugins/worktree-labels/labels.py" \
+  "$HOME/.config/herdr/local-plugins/worktree-labels/test_labels.py" \
+  "$HOME/.config/herdr/local-plugins/worktree-labels/smoke_test.py" \
+  "$HOME/.config/herdr/local-plugins/worktree-labels/README.md" \
   "$HOME/.config/nvim/init.lua" \
   "$HOME/.config/nvim/lua" \
   "$HOME/.config/nvim/lsp" \

@@ -1,0 +1,51 @@
+id = "local.worktree-labels"
+name = "Combined worktree labels"
+version = "0.1.0"
+min_herdr_version = "0.9.1"
+description = "Name spaces after their panes' worktrees, joined with *"
+platforms = ["macos", "linux"]
+
+[[startup]]
+command = ["python3", "labels.py"]
+
+[[actions]]
+id = "refresh"
+title = "Refresh combined worktree labels"
+contexts = ["global"]
+command = ["python3", "labels.py"]
+
+[[events]]
+on = "pane.moved"
+command = ["python3", "labels.py"]
+
+[[events]]
+on = "pane.created"
+command = ["python3", "labels.py"]
+
+[[events]]
+on = "pane.closed"
+command = ["python3", "labels.py"]
+
+[[events]]
+on = "pane.exited"
+command = ["python3", "labels.py"]
+
+[[events]]
+on = "pane.focused"
+command = ["python3", "labels.py"]
+
+[[events]]
+on = "tab.closed"
+command = ["python3", "labels.py"]
+
+[[events]]
+on = "workspace.created"
+command = ["python3", "labels.py"]
+
+[[events]]
+on = "workspace.updated"
+command = ["python3", "labels.py"]
+
+[[events]]
+on = "worktree.opened"
+command = ["python3", "labels.py"]
