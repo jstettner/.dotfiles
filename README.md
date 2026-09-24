@@ -94,8 +94,9 @@ Run `/reload` after installing or updating the extension.
 Herdr's worktree path is `~/wt/ambral`, portable across home directories.
 `prefix + g` opens Arrange's pane destination picker; the original Goto picker
 is on `prefix + alt + g`. Git-backed spaces automatically combine their panes'
-six-character worktree names with ASCII dots, e.g. `loader . bench-`. Manual space
-names are replaced on refresh. See the deployed plugin's
+six-character worktree names with centered dots, e.g. `loader · bench-`. When
+only one worktree remains, its full name is restored. Manual space names are
+replaced on refresh. See the deployed plugin's
 `~/.config/herdr/local-plugins/worktree-labels/README.md` for details and tests.
 On existing machines, run `scripts/setup-plugins.sh` after applying this update
 to install/link the new plugins; reloading configuration alone is not enough.

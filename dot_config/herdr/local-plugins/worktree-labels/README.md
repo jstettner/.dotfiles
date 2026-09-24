@@ -6,18 +6,20 @@ application repositories. Requires Python 3 and Git. No background daemon.
 ## Naming
 
 Each space is named after the Git checkouts occupied by its panes, across all
-its tabs, in pane order. Duplicate full labels are removed, each name is
-truncated to its first six characters, then joined with the ASCII separator
-` . `. Distinct names sharing the same six-character prefix remain separate.
+its tabs, in pane order. Duplicate full labels are removed. With multiple
+worktrees, each name is truncated to six characters and joined with centered
+dots (` · `). With just one worktree, its full name is shown—even if it has
+multiple panes. Moving the other worktrees out restores the full name.
+Distinct names sharing the same six-character prefix remain separate.
 
-- Linked worktree on `ui/loader-fix` → `loader`
-- Linked worktree on `ui/bench-to-tailwind` → `bench-`
-- Combined example → `loader . bench-`
-- Linked worktree on `ui/feature/auth` → `featur`
-- Branch without a slash → the first six characters of the branch name
-- Detached linked worktree → the first six characters of the checkout directory name
-- Primary checkout → the first six characters of the repository directory name
-- Names shorter than six characters are kept as-is
+- Single linked worktree on `ui/loader-fix` → `loader-fix`
+- Single linked worktree on `ui/bench-to-tailwind` → `bench-to-tailwind`
+- Both in one space → `loader · bench-`
+- Single linked worktree on `ui/feature/auth` → `feature/auth`
+- Branch without a slash → the branch name
+- Detached linked worktree → checkout directory name
+- Primary checkout → repository directory name
+- Names shorter than six characters are kept as-is when combined
 - Non-Git panes are ignored; spaces with no Git panes are left alone
 
 Labels come from each pane's `cwd` and Git metadata, not workspace provenance or

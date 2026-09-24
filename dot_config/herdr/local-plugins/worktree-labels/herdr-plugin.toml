@@ -1,8 +1,8 @@
 id = "local.worktree-labels"
 name = "Combined worktree labels"
-version = "0.1.1"
+version = "0.1.2"
 min_herdr_version = "0.9.1"
-description = "Join six-character worktree names with ASCII dots"
+description = "Combine shortened worktree names with centered dots; keep single names full"
 platforms = ["macos", "linux"]
 
 [[startup]]

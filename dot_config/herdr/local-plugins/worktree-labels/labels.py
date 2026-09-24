@@ -12,7 +12,7 @@ import sys
 
 
 NAME_LENGTH = 6
-SEPARATOR = " . "
+SEPARATOR = " · "
 
 
 class HerdrError(RuntimeError):
@@ -85,8 +85,11 @@ def workspace_labels(snapshot, resolve_checkout):
             if label not in labels:
                 labels.append(label)
     # Deduplicate full names before truncating so matching prefixes stay distinct.
-    return {ws: SEPARATOR.join(label[:NAME_LENGTH] for label in labels)
-            for ws, labels in names.items() if labels}
+    return {
+        ws: labels[0] if len(labels) == 1 else
+        SEPARATOR.join(label[:NAME_LENGTH] for label in labels)
+        for ws, labels in names.items() if labels
+    }
 
 
 def refresh(api, resolve_checkout, dry_run):

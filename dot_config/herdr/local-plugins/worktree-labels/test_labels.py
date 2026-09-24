@@ -36,7 +36,12 @@ class LabelTests(unittest.TestCase):
 
     def test_combines_deduplicates_and_includes_all_tabs(self):
         self.assertEqual(workspace_labels(snapshot(), resolve),
-                         {"a": "loader . bench-"})
+                         {"a": "loader · bench-"})
+
+    def test_one_worktree_across_multiple_panes_keeps_full_name(self):
+        data = snapshot()
+        data["panes"][2]["cwd"] = "/loader"
+        self.assertEqual(workspace_labels(data, resolve), {"a": "loader-fix"})
 
     def test_matching_six_character_prefixes_stay_distinct(self):
         def resolver(cwd):
@@ -45,7 +50,7 @@ class LabelTests(unittest.TestCase):
             return cwd, "loader-one" if cwd == "/loader" else "loader-two"
 
         self.assertEqual(workspace_labels(snapshot(), resolver),
-                         {"a": "loader . loader"})
+                         {"a": "loader · loader"})
 
     def test_short_and_exactly_six_character_names_are_not_padded(self):
         def resolver(cwd):
@@ -54,7 +59,7 @@ class LabelTests(unittest.TestCase):
             return cwd, "ui" if cwd == "/loader" else "second"
 
         self.assertEqual(workspace_labels(snapshot(), resolver),
-                         {"a": "ui . second"})
+                         {"a": "ui · second"})
 
     def test_resolves_duplicate_cwds_once(self):
         calls = []
@@ -70,10 +75,10 @@ class LabelTests(unittest.TestCase):
         data = snapshot()
         data["panes"][2]["workspace_id"] = "b"
         self.assertEqual(workspace_labels(data, resolve),
-                         {"a": "loader", "b": "bench-"})
+                         {"a": "loader-fix", "b": "bench-to-tailwind"})
         data["panes"][2]["workspace_id"] = "a"
         self.assertEqual(workspace_labels(data, resolve),
-                         {"a": "loader . bench-"})
+                         {"a": "loader · bench-"})
 
     def test_closed_last_pane_and_missing_cwd(self):
         data = snapshot()
@@ -94,7 +99,7 @@ class LabelTests(unittest.TestCase):
         self.assertEqual(len(refresh(api, resolve, False)), 1)
         self.assertEqual(refresh(api, resolve, False), [])
         self.assertEqual(calls, [("workspace", "rename", "a",
-                                 "loader . bench-")])
+                                 "loader · bench-")])
         self.assertEqual(data["workspaces"][1]["label"], "old-b")
 
     def test_dry_run_does_not_rename(self):
