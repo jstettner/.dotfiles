@@ -59,8 +59,8 @@ def run():
         git("init", "-b", "main", str(repo))
         git("-C", str(repo), "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
             "commit", "--allow-empty", "-m", "init")
-        git("-C", str(repo), "worktree", "add", "-b", "ui/first", str(first))
-        git("-C", str(repo), "worktree", "add", "-b", "ui/second", str(second))
+        git("-C", str(repo), "worktree", "add", "-b", "ui/first-long-name", str(first))
+        git("-C", str(repo), "worktree", "add", "-b", "ui/second-long-name", str(second))
 
         with (root / "server.log").open("w+") as log:
             server = subprocess.Popen([BINARY, "--session", SESSION, "server"], env=ENV,
@@ -82,28 +82,28 @@ def run():
                 a_pane = a["root_pane"]["pane_id"]
                 b_pane = b["root_pane"]["pane_id"]
                 terminal = b["root_pane"]["terminal_id"]
-                wait_for(lambda: label_is(a_id, "first") and label_is(b_id, "second"))
+                wait_for(lambda: label_is(a_id, "first-") and label_is(b_id, "second"))
 
                 moved = cli("pane", "move", b_pane, "--tab", a["tab"]["tab_id"],
                             "--target-pane", a_pane, "--split", "right", "--no-focus")["move_result"]
                 assert moved["changed"] and moved["closed_workspace_id"] == b_id
                 assert moved["pane"]["terminal_id"] == terminal
-                wait_for(lambda: label_is(a_id, "first * second"))
+                wait_for(lambda: label_is(a_id, "first- . second"))
                 assert b_id not in [ws["workspace_id"] for ws in cli("workspace", "list")["workspaces"]]
                 print("PASS: cross-space move combines names, preserves terminal, closes empty source")
 
                 separated = cli("pane", "move", moved["pane"]["pane_id"], "--new-workspace",
                                 "--label", "before-separated", "--no-focus")["move_result"]
                 separated_id = separated["pane"]["workspace_id"]
-                wait_for(lambda: label_is(a_id, "first") and label_is(separated_id, "second"))
+                wait_for(lambda: label_is(a_id, "first-") and label_is(separated_id, "second"))
                 print("PASS: moving a pane out restores both single-worktree labels")
 
                 same = cli("pane", "split", a_pane, "--direction", "right", "--cwd", str(first), "--no-focus")
-                wait_for(lambda: label_is(a_id, "first"))
+                wait_for(lambda: label_is(a_id, "first-"))
                 other = cli("pane", "split", a_pane, "--direction", "down", "--cwd", str(second), "--no-focus")
-                wait_for(lambda: label_is(a_id, "first * second"))
+                wait_for(lambda: label_is(a_id, "first- . second"))
                 cli("pane", "close", other["pane"]["pane_id"])
-                wait_for(lambda: label_is(a_id, "first"))
+                wait_for(lambda: label_is(a_id, "first-"))
                 cli("pane", "close", same["pane"]["pane_id"])
                 print("PASS: splits deduplicate names and pane close removes the departing worktree")
 

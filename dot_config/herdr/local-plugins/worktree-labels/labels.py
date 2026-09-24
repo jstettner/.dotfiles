@@ -11,6 +11,10 @@ import subprocess
 import sys
 
 
+NAME_LENGTH = 6
+SEPARATOR = " . "
+
+
 class HerdrError(RuntimeError):
     def __init__(self, error):
         self.code = error["code"]
@@ -80,7 +84,9 @@ def workspace_labels(snapshot, resolve_checkout):
             labels = names[pane["workspace_id"]]
             if label not in labels:
                 labels.append(label)
-    return {ws: " * ".join(labels) for ws, labels in names.items() if labels}
+    # Deduplicate full names before truncating so matching prefixes stay distinct.
+    return {ws: SEPARATOR.join(label[:NAME_LENGTH] for label in labels)
+            for ws, labels in names.items() if labels}
 
 
 def refresh(api, resolve_checkout, dry_run):
