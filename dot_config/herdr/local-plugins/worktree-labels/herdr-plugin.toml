@@ -1,8 +1,8 @@
 id = "local.worktree-labels"
 name = "Combined worktree labels"
-version = "0.1.2"
+version = "0.1.3"
 min_herdr_version = "0.9.1"
-description = "Combine shortened worktree names with centered dots; keep single names full"
+description = "Combine shortened worktree names; use full folder names for single checkouts"
 platforms = ["macos", "linux"]
 
 [[startup]]

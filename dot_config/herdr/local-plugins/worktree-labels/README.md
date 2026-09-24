@@ -6,18 +6,19 @@ application repositories. Requires Python 3 and Git. No background daemon.
 ## Naming
 
 Each space is named after the Git checkouts occupied by its panes, across all
-its tabs, in pane order. Duplicate full labels are removed. With multiple
-worktrees, each name is truncated to six characters and joined with centered
-dots (` · `). With just one worktree, its full name is shown—even if it has
-multiple panes. Moving the other worktrees out restores the full name.
-Distinct names sharing the same six-character prefix remain separate.
+its tabs, in pane order. Checkouts are deduplicated by their canonical paths.
+With multiple worktrees, each short name is truncated to six characters and
+joined with centered dots (` · `). With just one worktree, its full checkout
+folder name is shown—even if it has multiple panes or a detached HEAD.
+Moving the other worktrees out restores that folder name, including prefixes.
+Distinct checkouts with identical labels or six-character prefixes stay separate.
 
-- Single linked worktree on `ui/loader-fix` → `loader-fix`
-- Single linked worktree on `ui/bench-to-tailwind` → `bench-to-tailwind`
-- Both in one space → `loader · bench-`
-- Single linked worktree on `ui/feature/auth` → `feature/auth`
-- Branch without a slash → the branch name
-- Detached linked worktree → checkout directory name
+- Single checkout folder `ui-loader-fix` → `ui-loader-fix`
+- Single checkout folder `ui-bench-to-tailwind` → `ui-bench-to-tailwind`
+- Both attached to `ui/loader-fix` and `ui/bench-to-tailwind` → `loader · bench-`
+- Combined labels drop one branch namespace (e.g. `ui/`) before truncation
+- Branch without a slash → the branch name for combined labels
+- Detached linked worktree → checkout directory name for combined labels
 - Primary checkout → repository directory name
 - Names shorter than six characters are kept as-is when combined
 - Non-Git panes are ignored; spaces with no Git panes are left alone

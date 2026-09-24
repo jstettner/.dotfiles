@@ -21,8 +21,8 @@ def snapshot():
 
 
 def resolve(cwd):
-    return {"/loader": ("/loader", "loader-fix"),
-            "/tailwind": ("/tailwind", "bench-to-tailwind"),
+    return {"/loader": ("/worktrees/ui-loader-fix", "loader-fix"),
+            "/tailwind": ("/worktrees/ui-bench-to-tailwind", "bench-to-tailwind"),
             "/notes": None}[cwd]
 
 
@@ -41,7 +41,14 @@ class LabelTests(unittest.TestCase):
     def test_one_worktree_across_multiple_panes_keeps_full_name(self):
         data = snapshot()
         data["panes"][2]["cwd"] = "/loader"
-        self.assertEqual(workspace_labels(data, resolve), {"a": "loader-fix"})
+        self.assertEqual(workspace_labels(data, resolve), {"a": "ui-loader-fix"})
+
+    def test_distinct_checkouts_with_identical_labels_stay_distinct(self):
+        def resolver(cwd):
+            return None if cwd == "/notes" else (cwd, "loader-fix")
+
+        self.assertEqual(workspace_labels(snapshot(), resolver),
+                         {"a": "loader · loader"})
 
     def test_matching_six_character_prefixes_stay_distinct(self):
         def resolver(cwd):
@@ -75,7 +82,7 @@ class LabelTests(unittest.TestCase):
         data = snapshot()
         data["panes"][2]["workspace_id"] = "b"
         self.assertEqual(workspace_labels(data, resolve),
-                         {"a": "loader-fix", "b": "bench-to-tailwind"})
+                         {"a": "ui-loader-fix", "b": "ui-bench-to-tailwind"})
         data["panes"][2]["workspace_id"] = "a"
         self.assertEqual(workspace_labels(data, resolve),
                          {"a": "loader · bench-"})
@@ -148,6 +155,17 @@ class GitTests(unittest.TestCase):
         self.assertEqual(checkout(str(nested)), (str(worktree.resolve()), "loader-fix"))
         self.git("-C", str(worktree), "branch", "-m", "ui/feature/auth")
         self.assertEqual(checkout(str(nested))[1], "feature/auth")
+
+    def test_single_workspace_uses_same_folder_name_attached_or_detached(self):
+        worktree = self.root / "ui-loader-fix"
+        self.git("-C", str(self.repo), "worktree", "add", "-b", "ui/loader-fix", str(worktree))
+        nested = worktree / "src"
+        nested.mkdir()
+        data = {"workspaces": [{"workspace_id": "a"}],
+                "panes": [{"workspace_id": "a", "cwd": str(nested)}]}
+        self.assertEqual(workspace_labels(data, checkout), {"a": "ui-loader-fix"})
+        self.git("-C", str(worktree), "checkout", "--detach")
+        self.assertEqual(workspace_labels(data, checkout), {"a": "ui-loader-fix"})
 
     def test_detached_checkout_uses_folder_name(self):
         worktree = self.root / "detached"

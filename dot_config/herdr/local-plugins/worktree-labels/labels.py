@@ -69,8 +69,8 @@ def checkout(cwd):
 
 
 def workspace_labels(snapshot, resolve_checkout):
-    """Combine unique names in pane order across every tab in a workspace."""
-    names = {ws["workspace_id"]: [] for ws in snapshot["workspaces"]}
+    """Name unique checkouts in pane order across every tab in a workspace."""
+    worktrees = {ws["workspace_id"]: {} for ws in snapshot["workspaces"]}
     directories = {}
     for pane in snapshot["panes"]:
         cwd = pane.get("cwd")
@@ -80,15 +80,16 @@ def workspace_labels(snapshot, resolve_checkout):
             directories[cwd] = resolve_checkout(cwd)
         entry = directories[cwd]
         if entry is not None:
-            label = entry[1]
-            labels = names[pane["workspace_id"]]
-            if label not in labels:
-                labels.append(label)
-    # Deduplicate full names before truncating so matching prefixes stay distinct.
+            root, label = entry
+            worktrees[pane["workspace_id"]][root] = label
+    # A lone checkout uses its directory name, whether attached or detached.
+    # Distinct checkouts remain distinct even when their labels share a prefix.
     return {
-        ws: labels[0] if len(labels) == 1 else
-        SEPARATOR.join(label[:NAME_LENGTH] for label in labels)
-        for ws, labels in names.items() if labels
+        ws: (
+            Path(next(iter(checkouts))).name if len(checkouts) == 1 else
+            SEPARATOR.join(label[:NAME_LENGTH] for label in checkouts.values())
+        )
+        for ws, checkouts in worktrees.items() if checkouts
     }
 
 
