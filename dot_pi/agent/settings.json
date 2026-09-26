@@ -4,7 +4,10 @@
   "defaultProvider": "claude-bridge",
   "defaultModel": "claude-opus-5-5",
   "packages": [
-    "npm:@plannotator/pi-extension",
+    {
+      "source": "npm:@plannotator/pi-extension",
+      "skills": []
+    },
     "npm:pi-claude-bridge",
     "npm:pi-web-access",
     "npm:pi-powerline-footer"
