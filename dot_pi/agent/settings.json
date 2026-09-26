@@ -1,11 +1,20 @@
 {
   "lastChangelogVersion": "0.87.1",
   "theme": "dark",
-  "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-6-astra",
+  "defaultProvider": "claude-bridge",
+  "defaultModel": "claude-opus-5-5",
   "packages": [
-    "npm:@plannotator/pi-extension"
+    "npm:@plannotator/pi-extension",
+    "npm:pi-claude-bridge",
+    "npm:pi-web-access",
+    "npm:pi-powerline-footer"
   ],
   "hideThinkingBlock": false,
-  "tuiMode": "regular"
+  "tuiMode": "regular",
+  "defaultThinkingLevel": "xhigh",
+  "workingVibe": "zen",
+  "powerline": {
+    "preset": "default",
+    "placement": "above"
+  }
 }
