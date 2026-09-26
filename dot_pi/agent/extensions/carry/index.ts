@@ -1,13 +1,41 @@
 import {
+  getMarkdownTheme,
+  keyText,
   TreeSelectorComponent,
   type ExtensionAPI,
 } from "@earendil-works/pi-coding-agent";
+import { Box, Markdown, Spacer, Text } from "@earendil-works/pi-tui";
+
+const CARRY_TYPE = "carry";
+// What the model sees before the carried text; the renderer hides it.
+const CARRY_HEADER = "Carried from another branch of this conversation (your reply there):\n\n";
 
 export default function carry(pi: ExtensionAPI) {
   let running = false;
 
+  // Mirror pi's collapsible branch-summary block, labelled as a carry.
+  pi.registerMessageRenderer(CARRY_TYPE, (message, { expanded, outputPad }, theme) => {
+    const content = typeof message.content === "string"
+      ? message.content
+      : message.content.filter((block) => block.type === "text").map((block) => block.text).join("");
+    const text = content.startsWith(CARRY_HEADER) ? content.slice(CARRY_HEADER.length) : content;
+    const box = new Box(outputPad, 1, (t) => theme.bg("customMessageBg", t));
+    box.addChild(new Text(theme.fg("customMessageLabel", "\x1b[1m[carry]\x1b[22m"), 0, 0));
+    box.addChild(new Spacer(1));
+    if (expanded) {
+      box.addChild(new Markdown(`**Carried from another branch**\n\n${text}`, 0, 0, getMarkdownTheme(), {
+        color: (t) => theme.fg("customMessageText", t),
+      }));
+    } else {
+      box.addChild(new Text(theme.fg("customMessageText", "Carried from another branch (")
+        + theme.fg("dim", keyText("app.tools.expand"))
+        + theme.fg("customMessageText", " to expand)"), 0, 0));
+    }
+    return box;
+  });
+
   pi.registerCommand("carry", {
-    description: "Carry the latest assistant text to a tree position as a branch summary",
+    description: "Carry the latest assistant text to a tree position",
     handler: async (_args, ctx) => {
       if (ctx.mode !== "tui") {
         throw new Error("/carry requires Pi's interactive terminal mode.");
@@ -62,25 +90,20 @@ export default function carry(pi: ExtensionAPI) {
           throw new Error("The session changed while /carry was open. Please retry.");
         }
 
-        // Only intercept this navigation; never change ordinary /tree summaries.
-        const unsubscribe = pi.on("session_before_tree", (event) => {
-          if (event.preparation.targetId !== targetId
-            || event.preparation.oldLeafId !== oldLeafId) return;
-          return {
-            summary: {
-              summary: text,
-              details: { source: "carry", sourceLeafId: oldLeafId },
-            },
-          };
-        });
-        try {
-          const result = await ctx.navigateTree(targetId, { summarize: true });
-          if (!result.cancelled) {
-            ctx.ui.notify("Carried assistant text as a branch summary. No model call made.", "info");
-          }
-        } finally {
-          unsubscribe();
-        }
+        // Navigate without summarizing, so no summarizer (pi's or pi-claude-bridge's) runs,
+        // then append the text at the new position. While idle, sendMessage appends at once.
+        const result = await ctx.navigateTree(targetId, { summarize: false });
+        if (result.cancelled) return;
+        pi.sendMessage(
+          {
+            customType: CARRY_TYPE,
+            content: CARRY_HEADER + text,
+            display: true,
+            details: { sourceLeafId: oldLeafId },
+          },
+          { triggerTurn: false },
+        );
+        ctx.ui.notify("Carried the latest assistant text.", "info");
       } finally {
         running = false;
       }
