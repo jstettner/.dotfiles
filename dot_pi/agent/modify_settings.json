@@ -1,33 +1,12 @@
 {{- /* chezmoi:modify-template */ -}}
+{{- /* scripts/capture.sh snapshots Pi's settings.json into .chezmoitemplates. */ -}}
 {{- /* Pi bumps lastChangelogVersion on self-update; keep whatever is on disk. */ -}}
-{{- $lastChangelogVersion := "0.87.1" -}}
+{{- $settings := include ".chezmoitemplates/pi-settings.json" -}}
 {{- if .chezmoi.stdin -}}
 {{-   $current := fromJson .chezmoi.stdin -}}
 {{-   if hasKey $current "lastChangelogVersion" -}}
-{{-     $lastChangelogVersion = $current.lastChangelogVersion -}}
+{{-     $version := printf `"lastChangelogVersion": %s` (toJson $current.lastChangelogVersion) -}}
+{{-     $settings = regexReplaceAllLiteral `"lastChangelogVersion": "[^"]*"` $settings $version -}}
 {{-   end -}}
 {{- end -}}
-{
-  "lastChangelogVersion": {{ $lastChangelogVersion | toJson }},
-  "theme": "dark",
-  "defaultProvider": "claude-bridge",
-  "defaultModel": "claude-opus-5-5",
-  "packages": [
-    {
-      "source": "npm:@plannotator/pi-extension",
-      "skills": []
-    },
-    "npm:pi-claude-bridge",
-    "npm:pi-web-access",
-    "npm:pi-powerline-footer"
-  ],
-  "hideThinkingBlock": false,
-  "tuiMode": "regular",
-  "defaultThinkingLevel": "xhigh",
-  "workingVibe": "zen",
-  "powerline": {
-    "preset": "default",
-    "placement": "above"
-  }
-}
-{{- /* Pi writes JSON.stringify(settings, null, 2) with no trailing newline. */ -}}
+{{- $settings -}}

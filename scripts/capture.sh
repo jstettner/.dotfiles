@@ -2,21 +2,29 @@
 # Capture only reviewed configuration paths, never whole application directories.
 set -euo pipefail
 
+source_dir="$(chezmoi source-path)"
+
+# Re-add every tracked file. Templates are skipped: chezmoi add would replace
+# them with plain copies of the target.
+chezmoi managed --include files --path-style all --format json | python3 -c '
+import json, os, sys
+for entry in json.load(sys.stdin).values():
+    name = os.path.basename(entry["sourceRelative"])
+    if not (name.startswith(("create_", "modify_")) or name.endswith(".tmpl")):
+        sys.stdout.write(entry["absolute"] + "\0")
+' | xargs -0 -r chezmoi add --secrets error
+
+# New files are picked up only in folders that hold nothing but our own config.
 chezmoi add --secrets error \
-  "$HOME/.pi/agent/settings.json" \
-  "$HOME/.pi/agent/extensions/label.ts" \
-  "$HOME/.pi/agent/extensions/carry/index.ts" \
-  "$HOME/.config/herdr/config.toml" \
-  "$HOME/.config/herdr/local-plugins/worktree-labels/herdr-plugin.toml" \
-  "$HOME/.config/herdr/local-plugins/worktree-labels/labels.py" \
-  "$HOME/.config/herdr/local-plugins/worktree-labels/test_labels.py" \
-  "$HOME/.config/herdr/local-plugins/worktree-labels/smoke_test.py" \
-  "$HOME/.config/herdr/local-plugins/worktree-labels/README.md" \
-  "$HOME/.config/nvim/init.lua" \
+  "$HOME/.pi/agent/extensions" \
+  "$HOME/.config/herdr/local-plugins" \
   "$HOME/.config/nvim/lua" \
-  "$HOME/.config/nvim/lsp" \
-  "$HOME/.config/nvim/lazy-lock.json" \
-  "$HOME/.config/nvim/nvim-pack-lock.json"
+  "$HOME/.config/nvim/lsp"
+
+# Pi's settings.json deploys through modify_settings.json; scan it as chezmoi add
+# would, then snapshot it for that template.
+chezmoi add --dry-run --secrets error "$HOME/.pi/agent/settings.json"
+cp "$HOME/.pi/agent/settings.json" "$source_dir/.chezmoitemplates/pi-settings.json"
 
 if [[ -f "$HOME/.pi/agent/keybindings.json" ]]; then
   chezmoi add --secrets error "$HOME/.pi/agent/keybindings.json"
@@ -24,7 +32,7 @@ fi
 
 # Herdr's plugins.json is machine state; record just what the setup hook needs to
 # reinstall each plugin at the commit installed here.
-python3 - "$HOME/.config/herdr/plugins.json" "$(chezmoi source-path)" <<'PY'
+python3 - "$HOME/.config/herdr/plugins.json" "$source_dir" <<'PY'
 import json, os, subprocess, sys
 
 state, source_dir = sys.argv[1:]
