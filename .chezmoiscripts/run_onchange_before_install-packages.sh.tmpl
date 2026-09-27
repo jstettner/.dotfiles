@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# Install the tools this config and the plugin hook need. chezmoi reruns this
+# only when it changes; each step skips tools that are already present.
+{{ template "path.sh" . }}
+set -euo pipefail
+{{- if eq .chezmoi.os "darwin" }}
+
+if ! command -v brew >/dev/null 2>&1; then
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  if [ -x /opt/homebrew/bin/brew ]; then eval "$(/opt/homebrew/bin/brew shellenv)"; fi
+fi
+formulae=()
+for pair in gh:gh go:go nvim:neovim rg:ripgrep tree-sitter:tree-sitter-cli; do
+  command -v "${pair%%:*}" >/dev/null 2>&1 || formulae+=("${pair#*:}")
+done
+if [ ${#formulae[@]} -gt 0 ]; then brew install "${formulae[@]}"; fi
+
+# New login shells need Homebrew and ~/.local/bin (herdr, chezmoi) on PATH.
+# env -i so the check sees only what a fresh login shell would.
+if ! env -i HOME="$HOME" zsh -lc 'command -v brew' >/dev/null 2>&1; then
+  printf '\neval "$(%s shellenv)"\n' "$(command -v brew)" >> ~/.zprofile
+fi
+if ! env -i HOME="$HOME" zsh -lc 'case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) exit 1 ;; esac'; then
+  printf '\nexport PATH="$HOME/.local/bin:$PATH"\n' >> ~/.zprofile
+fi
+{{- else if eq .chezmoi.os "linux" }}
+
+sudo=""
+if [ "$(id -u)" -ne 0 ]; then sudo=sudo; fi
+if command -v apt-get >/dev/null 2>&1; then
+  packages=()
+  for p in build-essential ca-certificates curl gh git python3 ripgrep unzip; do
+    dpkg -s "$p" >/dev/null 2>&1 || packages+=("$p")
+  done
+  if [ ${#packages[@]} -gt 0 ]; then
+    $sudo apt-get update
+    $sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y "${packages[@]}"
+  fi
+else
+  echo "No apt-get: install a C toolchain, gh, git, python3, ripgrep, and unzip yourself." >&2
+fi
+
+# Distro packages are too old: Neovim must be >= 0.12.4 and Go >= 1.24.2.
+version_ge() { [ "$(printf '%s\n' "$2" "$1" | sort -V | head -n1)" = "$2" ]; }
+case "$(uname -m)" in
+  x86_64) nvim_arch=x86_64 go_arch=amd64 ;;
+  aarch64 | arm64) nvim_arch=arm64 go_arch=arm64 ;;
+  *) echo "Unsupported architecture: $(uname -m)" >&2; exit 1 ;;
+esac
+mkdir -p ~/.local/bin
+if ! version_ge "$(nvim --version 2>/dev/null | sed -n '1s/^NVIM v//p')" 0.12.4; then
+  rm -rf ~/.local/nvim && mkdir -p ~/.local/nvim
+  curl -fsSL "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-$nvim_arch.tar.gz" \
+    | tar -xz -C ~/.local/nvim --strip-components=1
+  ln -sf ~/.local/nvim/bin/nvim ~/.local/bin/nvim
+fi
+if ! version_ge "$(go env GOVERSION 2>/dev/null | sed 's/^go//')" 1.24.2; then
+  rm -rf ~/.local/go
+  go_version=$(curl -fsSL 'https://go.dev/VERSION?m=text' | sed -n 1p)
+  curl -fsSL "https://go.dev/dl/$go_version.linux-$go_arch.tar.gz" | tar -xz -C ~/.local
+  ln -sf ~/.local/go/bin/go ~/.local/go/bin/gofmt ~/.local/bin/
+fi
+{{- end }}
+
+# Node comes from nvm on every OS; Pi installs into it.
+if [ ! -s "$NVM_DIR/nvm.sh" ]; then
+  mkdir -p "$NVM_DIR"
+  curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.8/install.sh | bash
+fi
+set +e +u +o pipefail
+. "$NVM_DIR/nvm.sh"
+nvm which 24 >/dev/null 2>&1 || nvm install 24 || exit 1
+set -euo pipefail
+command -v pi >/dev/null 2>&1 || npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+{{- if eq .chezmoi.os "linux" }}
+command -v tree-sitter >/dev/null 2>&1 || npm install -g tree-sitter-cli
+{{- end }}
+command -v herdr >/dev/null 2>&1 || curl -fsSL https://herdr.dev/install.sh | sh
