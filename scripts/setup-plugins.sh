@@ -4,7 +4,7 @@ set -euo pipefail
 
 for tool in herdr nvim node npm git cc tree-sitter go python3; do
   if ! command -v "$tool" >/dev/null 2>&1; then
-    printf 'Missing prerequisite: %s (see README.md)\n' "$tool" >&2
+    printf 'Missing prerequisite: %s\n' "$tool" >&2
     exit 1
   fi
 done
