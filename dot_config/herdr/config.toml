@@ -4,7 +4,7 @@ onboarding = false
 mouse_capture = true
 
 [worktrees]
-directory = "~/wt/ambral"
+directory = "~/wt"
 
 [keys]
 goto = "prefix+alt+g"
