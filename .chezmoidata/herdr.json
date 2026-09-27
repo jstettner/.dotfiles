@@ -1,0 +1,20 @@
+{
+  "herdr": {
+    "plugins": [
+      {
+        "repo": "plannotator/herdr-annotate",
+        "ref": "1bc258353f0a7af0781493e1c1ffca09b71666bc"
+      },
+      {
+        "repo": "crierr/herdr-arrange",
+        "ref": "1060f44c31569fc43283cef34f1710adb6ffdcaf"
+      }
+    ],
+    "localPlugins": [
+      {
+        "path": ".config/herdr/local-plugins/worktree-labels",
+        "source": "dot_config/herdr/local-plugins/worktree-labels"
+      }
+    ]
+  }
+}

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # chezmoi runs this after apply whenever this script or a hashed input changes.
 # A failed run is not recorded, so it retries on the next apply.
-# worktree-labels manifest: {{ include "dot_config/herdr/local-plugins/worktree-labels/herdr-plugin.toml" | sha256sum }}
+# Local plugin manifests:{{ range .herdr.localPlugins }} {{ include (joinPath .source "herdr-plugin.toml") | sha256sum }}{{ end }}
 {{ template "path.sh" . }}
 set -euo pipefail
 
@@ -14,11 +14,13 @@ for tool in herdr git go python3; do
 done
 
 herdr integration install pi
-herdr plugin install plannotator/herdr-annotate \
-  --ref 7c8f5a177b8285dc56efc471ef04f7ab44a2b4b6 --yes
-herdr plugin install crierr/herdr-arrange \
-  --ref 1060f44c31569fc43283cef34f1710adb6ffdcaf --yes
-herdr plugin link "$HOME/.config/herdr/local-plugins/worktree-labels"
+# Plugins come from .chezmoidata/herdr.json, which scripts/capture.sh writes.
+{{- range .herdr.plugins }}
+herdr plugin install {{ .repo }} --ref {{ .ref }} --yes
+{{- end }}
+{{- range .herdr.localPlugins }}
+herdr plugin link "$HOME/{{ .path }}"
+{{- end }}
 # Startup hooks do not run on link; refresh now if a server is already running.
 if herdr api snapshot >/dev/null 2>&1; then
   herdr plugin action invoke local.worktree-labels.refresh
