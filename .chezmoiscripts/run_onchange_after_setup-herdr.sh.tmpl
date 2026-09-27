@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # chezmoi runs this after apply whenever this script or a hashed input changes.
 # A failed run is not recorded, so it retries on the next apply.
-# lazy-lock.json: {{ include "dot_config/nvim/lazy-lock.json" | sha256sum }}
 # worktree-labels manifest: {{ include "dot_config/herdr/local-plugins/worktree-labels/herdr-plugin.toml" | sha256sum }}
 {{ template "path.sh" . }}
 set -euo pipefail
 
-for tool in herdr nvim node npm git cc tree-sitter go python3; do
+# go builds herdr-arrange; python3 runs worktree-labels.
+for tool in herdr git go python3; do
   if ! command -v "$tool" >/dev/null 2>&1; then
     printf 'Missing prerequisite: %s\n' "$tool" >&2
     exit 1
@@ -24,11 +24,5 @@ if herdr api snapshot >/dev/null 2>&1; then
   herdr plugin action invoke local.worktree-labels.refresh
 fi
 herdr config check
-# First-run install records the bootstrap's lazy.nvim (stable branch) in the
-# lockfile, so put the committed lockfile back before restoring from it.
-nvim --headless +qa
-cp "{{ .chezmoi.sourceDir }}/dot_config/nvim/lazy-lock.json" "$HOME/.config/nvim/lazy-lock.json"
-# Restore, rather than update, the committed plugin versions.
-nvim --headless '+Lazy! restore' +qa
-printf '\nPlugins installed. Log into Pi with /login and GitHub with gh auth login.\n'
+printf '\nHerdr plugins installed. Log into Pi with /login and GitHub with gh auth login.\n'
 printf 'For a running Herdr server, run: herdr server reload-config\n'
