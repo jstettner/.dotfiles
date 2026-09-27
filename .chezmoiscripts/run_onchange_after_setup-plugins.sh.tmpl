@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# Run explicitly after reviewing and applying the chezmoi configuration.
+# chezmoi runs this after apply whenever this script or a hashed input changes.
+# A failed run is not recorded, so it retries on the next apply.
+# lazy-lock.json: {{ include "dot_config/nvim/lazy-lock.json" | sha256sum }}
+# worktree-labels manifest: {{ include "dot_config/herdr/local-plugins/worktree-labels/herdr-plugin.toml" | sha256sum }}
 set -euo pipefail
 
 for tool in herdr nvim node npm git cc tree-sitter go python3; do
