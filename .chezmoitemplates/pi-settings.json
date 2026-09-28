@@ -10,7 +10,8 @@
     },
     "npm:pi-claude-bridge",
     "npm:pi-web-access",
-    "npm:pi-powerline-footer"
+    "npm:pi-powerline-footer",
+    "npm:pi-mermaid"
   ],
   "hideThinkingBlock": false,
   "tuiMode": "regular",
