@@ -20,3 +20,8 @@ scripts/**
 .config/herdr/local-plugins/worktree-labels/labels-before.json
 .config/nvim/.git/**
 .config/nvim/*.log
+
+# macOS-only application config.
+{{- if ne .chezmoi.os "darwin" }}
+Library
+{{- end }}
