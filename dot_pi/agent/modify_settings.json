@@ -1,12 +1,15 @@
 {{- /* chezmoi:modify-template */ -}}
 {{- /* scripts/capture.sh snapshots Pi's settings.json into .chezmoitemplates. */ -}}
-{{- /* Pi bumps lastChangelogVersion on self-update; keep whatever is on disk. */ -}}
+{{- /* Pi rewrites these keys itself (self-update, UI toggles); keep whatever is on disk. */ -}}
 {{- $settings := include ".chezmoitemplates/pi-settings.json" -}}
 {{- if .chezmoi.stdin -}}
 {{-   $current := fromJson .chezmoi.stdin -}}
-{{-   if hasKey $current "lastChangelogVersion" -}}
-{{-     $version := printf `"lastChangelogVersion": %s` (toJson $current.lastChangelogVersion) -}}
-{{-     $settings = regexReplaceAllLiteral `"lastChangelogVersion": "[^"]*"` $settings $version -}}
+{{-   range $key := list "lastChangelogVersion" "hideThinkingBlock" "defaultThinkingLevel" -}}
+{{-     if hasKey $current $key -}}
+{{-       $pattern := printf `"%s": (?:"[^"]*"|true|false|null|-?[0-9.]+)` $key -}}
+{{-       $value := printf `"%s": %s` $key (toJson (index $current $key)) -}}
+{{-       $settings = regexReplaceAllLiteral $pattern $settings $value -}}
+{{-     end -}}
 {{-   end -}}
 {{- end -}}
 {{- $settings -}}
