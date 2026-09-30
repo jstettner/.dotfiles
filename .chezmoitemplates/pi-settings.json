@@ -11,8 +11,8 @@
     },
     "npm:pi-claude-bridge",
     "npm:pi-web-access",
-    "npm:pi-powerline-footer",
-    "npm:pi-mermaid"
+    "npm:pi-mermaid",
+    "git:github.com/nicobailon/pi-powerline-footer"
   ],
   "hideThinkingBlock": false,
   "tuiMode": "regular",
