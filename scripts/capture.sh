@@ -22,9 +22,10 @@ chezmoi add --secrets error \
   "$HOME/.config/nvim/lsp"
 
 # Pi's settings.json deploys through modify_settings.json; scan it as chezmoi add
-# would, then snapshot it for that template.
+# would, then snapshot it without capturing Pi-managed runtime values.
 chezmoi add --dry-run --secrets error "$HOME/.pi/agent/settings.json"
-cp "$HOME/.pi/agent/settings.json" "$source_dir/.chezmoitemplates/pi-settings.json"
+python3 "$source_dir/scripts/capture-pi-settings.py" \
+  "$HOME/.pi/agent/settings.json" "$source_dir/.chezmoitemplates/pi-settings.json"
 
 if [[ -f "$HOME/.pi/agent/keybindings.json" ]]; then
   chezmoi add --secrets error "$HOME/.pi/agent/keybindings.json"

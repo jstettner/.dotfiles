@@ -1,7 +1,9 @@
 {
   "lastChangelogVersion": "0.87.1",
   "theme": "dark",
-  "defaultTools": ["+codemode"],
+  "defaultTools": [
+    "+codemode"
+  ],
   "defaultProvider": "claude-bridge",
   "defaultModel": "claude-opus-5-5",
   "packages": [
