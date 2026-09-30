@@ -1,7 +1,8 @@
 {{- /* chezmoi:modify-template */ -}}
 {{- /* scripts/capture.sh snapshots Pi's settings.json into .chezmoitemplates. */ -}}
 {{- /* Pi rewrites these keys itself (self-update, UI toggles); keep whatever is on disk. */ -}}
-{{- $settings := include ".chezmoitemplates/pi-settings.json" -}}
+{{- /* Pi writes the file without a trailing newline, so drop the snapshot's. */ -}}
+{{- $settings := include ".chezmoitemplates/pi-settings.json" | trimSuffix "\n" -}}
 {{- if .chezmoi.stdin -}}
 {{-   $current := fromJson .chezmoi.stdin -}}
 {{-   range $key := .pi.runtimeKeys -}}
