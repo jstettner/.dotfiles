@@ -4,8 +4,9 @@ import json
 from pathlib import Path
 import sys
 
-# Keep in sync with the keys preserved by dot_pi/agent/modify_settings.json.
-RUNTIME_KEYS = ("lastChangelogVersion", "hideThinkingBlock", "defaultThinkingLevel")
+RUNTIME_KEYS = tuple(json.loads(
+    (Path(__file__).resolve().parent.parent / ".chezmoidata" / "pi.json").read_text()
+)["pi"]["runtimeKeys"])
 
 
 def capture(current_path, snapshot_path):

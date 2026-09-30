@@ -4,7 +4,7 @@
 {{- $settings := include ".chezmoitemplates/pi-settings.json" -}}
 {{- if .chezmoi.stdin -}}
 {{-   $current := fromJson .chezmoi.stdin -}}
-{{-   range $key := list "lastChangelogVersion" "hideThinkingBlock" "defaultThinkingLevel" -}}
+{{-   range $key := .pi.runtimeKeys -}}
 {{-     if hasKey $current $key -}}
 {{-       $pattern := printf `"%s": (?:"[^"]*"|true|false|null|-?[0-9.]+)` $key -}}
 {{-       $value := printf `"%s": %s` $key (toJson (index $current $key)) -}}
