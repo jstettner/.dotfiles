@@ -13,7 +13,6 @@
     },
     "npm:pi-claude-bridge",
     "npm:pi-web-access",
-    "npm:pi-mermaid",
     "git:github.com/nicobailon/pi-powerline-footer"
   ],
   "hideThinkingBlock": false,
