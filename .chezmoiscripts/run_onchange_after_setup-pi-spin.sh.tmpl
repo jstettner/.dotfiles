@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# chezmoi runs this after apply whenever this script changes.
+# A failed run is not recorded, so it retries on the next apply.
+# Pi's settings.json loads the pi-spin package from this checkout, so clone it if
+# missing. An existing checkout is never pulled or reset: it may hold work in progress.
+{{ template "path.sh" . }}
+set -euo pipefail
+
+for tool in gh git npm; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    printf 'Missing prerequisite: %s\n' "$tool" >&2
+    exit 1
+  fi
+done
+
+checkout="$HOME/src/pi-spin"
+if [ ! -d "$checkout" ]; then
+  # The repository is private for now, so cloning needs GitHub auth.
+  if ! gh auth status >/dev/null 2>&1; then
+    printf 'pi-spin: run gh auth login, then chezmoi apply again.\n' >&2
+    exit 1
+  fi
+  mkdir -p "$(dirname "$checkout")"
+  gh repo clone jstettner/pi-spin "$checkout"
+fi
+# Pi doesn't install dependencies for local packages.
+npm install --prefix "$checkout"
+printf '\npi-spin ready in %s. Run /reload in open Pi sessions.\n' "$checkout"
