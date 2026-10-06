@@ -21,7 +21,8 @@ scripts/**
 .config/nvim/.git/**
 .config/nvim/*.log
 
-# macOS-only application config.
+# macOS-only application config and desktop automation.
 {{- if ne .chezmoi.os "darwin" }}
+.pi/agent/mcp.json
 Library
 {{- end }}

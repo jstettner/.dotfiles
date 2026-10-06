@@ -1,0 +1,16 @@
+{{- if eq .chezmoi.os "darwin" -}}
+#!/usr/bin/env bash
+# Install only when missing; macOS permission grants remain manual.
+{{ template "path.sh" . }}
+set -euo pipefail
+
+if ! command -v cua-driver >/dev/null 2>&1; then
+  installer=$(curl -fsSL https://cua.ai/driver/install.sh)
+  /bin/bash -c "$installer"
+fi
+
+if ! command -v cua-driver >/dev/null 2>&1; then
+  printf "Cua Driver installation did not put cua-driver on PATH.\n" >&2
+  exit 1
+fi
+{{- end }}
