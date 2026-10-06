@@ -13,8 +13,6 @@
     },
     "npm:pi-claude-bridge",
     "npm:pi-web-access",
-    "git:github.com/nicobailon/pi-powerline-footer",
-    "git:github.com/humanlayer/humanlayer-pi",
     "~/src/pi-spin"
   ],
   "hideThinkingBlock": false,
