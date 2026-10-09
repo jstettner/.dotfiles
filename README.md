@@ -4,6 +4,13 @@
 sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin init --apply --source ~/src/dotfiles https://github.com/jstettner/.dotfiles.git
 ```
 
+## Zed
+
+Chezmoi tracks `~/.config/zed/settings.json` and `~/.config/zed/keymap.json`.
+Prompts, themes, and runtime state are not captured. After changing settings or
+bindings in Zed, run `bash scripts/capture.sh` from this repository and review the
+Git diff before committing. Run `chezmoi apply` to deploy the tracked config.
+
 ## Pi desktop automation (macOS)
 
 `chezmoi apply` installs [Cua Driver](https://cua.ai/docs/cua-driver/quickstart)

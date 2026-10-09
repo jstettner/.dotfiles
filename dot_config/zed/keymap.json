@@ -1,0 +1,16 @@
+[
+  {
+    "context": "Editor && VimControl && !menu",
+    "bindings": {
+      "ctrl-w l": "terminal_panel::ToggleFocus"
+    }
+  },
+  {
+    "context": "Terminal",
+    "bindings": {
+      "ctrl-w": null,
+      "ctrl-w h": "terminal_panel::ToggleFocus",
+      "ctrl-b [": "terminal::ToggleViMode"
+    }
+  }
+]
