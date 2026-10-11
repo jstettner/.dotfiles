@@ -1,15 +1,25 @@
 /**
  * Recolors the π logo in Pi's startup header with the pink → cyan gradient from
- * pi-powerline-footer's welcome screen.
+ * pi-powerline-footer's welcome screen, and continues that gradient down the
+ * loaded-resource section headers ([Context], [Skills], [Prompts], [Extensions]).
  *
- * Pi has no hook for the logo's colors, so this installs a header that wraps the
+ * Pi has no hook for these colors, so this installs a header that wraps the
  * built-in one: everything (version, key hints, Ctrl+O expansion, the logo-click
- * easter egg) is delegated, and only the logo's four cells are repainted.
+ * easter egg) is delegated, and only the logo's four cells are repainted. The
+ * loaded-resources container (the header's sibling) gets its render wrapped the
+ * same way; warning sections such as [Extension issues] keep Pi's warning color.
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { Component, TuiMouseEvent, TuiMouseEventResult } from "@earendil-works/pi-tui";
-import { backgroundAnsi, foregroundAnsi, parseColor, sliceByColumn, stripTerminalSequences } from "@earendil-works/pi-tui";
+import {
+	backgroundAnsi,
+	foregroundAnsi,
+	mixColors,
+	parseColor,
+	sliceByColumn,
+	stripTerminalSequences,
+} from "@earendil-works/pi-tui";
 
 type Theme = ExtensionContext["ui"]["theme"];
 
@@ -32,6 +42,35 @@ type Header = Component & {
 };
 
 const WRAPPED = Symbol("logo-gradient");
+const SECTIONS_PATCHED = Symbol("logo-gradient-sections");
+const SECTION_HEADER = /^(\s*)\[(Context|Skills|Prompts|Extensions)\]\s*$/;
+
+/** Gradient color at `t` in [0, 1], blended smoothly between the stops. */
+function gradientAt(theme: Theme, t: number): string {
+	const scaled = Math.min(1, Math.max(0, t)) * (GRADIENT.length - 1);
+	const i = Math.min(GRADIENT.length - 2, Math.floor(scaled));
+	const color = mixColors(parseColor(GRADIENT[i]), parseColor(GRADIENT[i + 1]), scaled - i, "oklch");
+	return foregroundAnsi(color, theme.getColorMode());
+}
+
+/** Section headers run down the gradient; each one blends across its own slice of it. */
+function recolorSections(theme: Theme, lines: string[]): string[] {
+	const headers: number[] = [];
+	lines.forEach((line, i) => {
+		if (SECTION_HEADER.test(stripTerminalSequences(line))) headers.push(i);
+	});
+	headers.forEach((lineIdx, k) => {
+		const [, indent, name] = SECTION_HEADER.exec(stripTerminalSequences(lines[lineIdx]))!;
+		const label = `[${name}]`;
+		const span = 1 / headers.length;
+		let out = indent;
+		for (let j = 0; j < label.length; j++) {
+			out += `${gradientAt(theme, (k + j / label.length) * span)}${label[j]}`;
+		}
+		lines[lineIdx] = `${out}${RESET}`;
+	});
+	return lines;
+}
 
 /** Diagonal gradient: top-left pink, bottom-right cyan. */
 function pixelColor(row: number, col: number): number | undefined {
@@ -57,26 +96,50 @@ function logoLine(theme: Theme, line: number): string {
 	return out;
 }
 
-/** The built-in header: the one component in the tree with Pi's logo-click hook. */
-function findBuiltInHeader(node: unknown): Header | undefined {
+const isHeader = (node: object) => WRAPPED in node || ("onLogoClick" in node && "setExpanded" in node);
+
+/**
+ * The path from `node` to the header: the built-in one (the only component with Pi's logo-click hook) or
+ * our wrapper around it.
+ */
+function findHeaderPath(node: unknown, path: object[] = []): object[] | undefined {
 	if (!node || typeof node !== "object") return undefined;
-	if (WRAPPED in node) return (node as { [WRAPPED]: Header })[WRAPPED];
-	if ("onLogoClick" in node && "setExpanded" in node) return node as unknown as Header;
+	if (isHeader(node)) return [...path, node];
 	const children = (node as { children?: unknown }).children;
 	if (!Array.isArray(children)) return undefined;
 	for (const child of children) {
-		const found = findBuiltInHeader(child);
+		const found = findHeaderPath(child, [...path, node]);
 		if (found) return found;
 	}
 	return undefined;
+}
+
+/**
+ * Pi's document is [headerContainer, loadedResourcesContainer, chat]. The resources container is cleared and
+ * refilled on /reload but stays the same object, so wrapping its render once covers every listing.
+ */
+function patchSections(theme: Theme, path: object[]): void {
+	const document = path.at(-3) as { children?: unknown[] } | undefined;
+	const headerContainer = path.at(-2);
+	if (!document || !Array.isArray(document.children)) return;
+	const resources = document.children[document.children.indexOf(headerContainer) + 1] as
+		| (Component & { [SECTIONS_PATCHED]?: true })
+		| undefined;
+	if (!resources || resources[SECTIONS_PATCHED]) return;
+	const render = resources.render.bind(resources);
+	resources.render = (width: number) => recolorSections(theme, render(width));
+	resources[SECTIONS_PATCHED] = true;
 }
 
 export default function (pi: ExtensionAPI) {
 	pi.on("session_start", (_event, ctx) => {
 		if (!ctx.hasUI) return;
 		ctx.ui.setHeader((tui, theme) => {
-			const inner = findBuiltInHeader(tui);
-			if (!inner) return { render: () => [], invalidate() {} };
+			const path = findHeaderPath(tui);
+			const found = path?.at(-1);
+			if (!path || !found) return { render: () => [], invalidate() {} };
+			const inner = (WRAPPED in found ? (found as { [WRAPPED]: Header })[WRAPPED] : found) as Header;
+			patchSections(theme, path);
 			return {
 				[WRAPPED]: inner,
 				render(width: number): string[] {
