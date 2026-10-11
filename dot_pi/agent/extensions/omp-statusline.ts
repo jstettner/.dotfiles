@@ -91,14 +91,13 @@ const SPINNER = ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"];
 const PALETTE = {
 	sep: 244,
 	staged: 70,
-	unstaged: 178,
 	untracked: 39,
 };
 
 // The left segments take spread-out stops of the π logo's pink → cyan palette (pi-powerline-footer's
-// GRADIENT_COLORS: 199, 171, 135, 99, 75, 51; the model takes 169, a duller cousin of 199), one fixed
-// color per segment so a missing segment doesn't shift the others.
-const SEGMENT_COLOR = { model: 169, path: 135, git: 75, cost: 51 };
+// GRADIENT_COLORS: 199, 171, 135, 99, 75, 51; the model and path take 169 and 134, duller cousins of 199
+// and 135), one fixed color per segment so a missing segment doesn't shift the others.
+const SEGMENT_COLOR = { model: 169, path: 134, git: 75, cost: 51 };
 
 const FG_RESET = "\x1b[39m";
 const RESET = "\x1b[0m";
@@ -147,6 +146,18 @@ function paint(ansi: string, text: string): string {
 
 function segmentAnsi(theme: Theme, segment: keyof typeof SEGMENT_COLOR): string {
 	return fgHex(theme, SEGMENT_COLOR[segment]);
+}
+
+const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh", "max"];
+
+/** The thinking level in the model's pink, from faint and dusty at `off` to vivid at `max`. */
+function thinkingAnsi(theme: Theme, level: string): string {
+	const index = THINKING_LEVELS.indexOf(level);
+	const t = index < 0 ? 0.5 : index / (THINKING_LEVELS.length - 1);
+	const { h } = colorToOkhsl(parseColor(SEGMENT_COLOR.model));
+	const s = 0.12 + t * 0.88;
+	const l = theme.appearance === "light" ? 0.6 - t * 0.15 : 0.5 + t * 0.22;
+	return foregroundAnsi(okhslColor(h, s, l), theme.getColorMode());
 }
 
 /** Stable per-session accent: djb2 hash of the name → OKHSL hue. */
@@ -340,12 +351,14 @@ export default function (pi: ExtensionAPI) {
 			const model = ctx.model;
 			if (!model) return undefined;
 			const name = (model.name || model.id).replace(/^Claude /, "");
-			let text = `${ICONS.model} ${name}`;
+			const modelAnsi = segmentAnsi(theme, "model");
+			let text = paint(modelAnsi, `${ICONS.model} ${name}`);
 			if (model.reasoning) {
 				const level = pi.getThinkingLevel();
-				text += ` · ${level === "off" ? `${ICONS.off} off` : (ICONS.thinking[level] ?? level)}`;
+				const label = level === "off" ? `${ICONS.off} off` : (ICONS.thinking[level] ?? level);
+				text += `${paint(modelAnsi, " · ")}${paint(thinkingAnsi(theme, level), label)}`;
 			}
-			return paint(segmentAnsi(theme, "model"), text);
+			return text;
 		};
 
 		const pathSegment = (theme: Theme, maxLength: number): string =>
@@ -355,7 +368,7 @@ export default function (pi: ExtensionAPI) {
 			if (!git.branch) return undefined;
 			let text = paint(segmentAnsi(theme, "git"), `${ICONS.branch} ${git.branch}`);
 			const indicators: string[] = [];
-			if (git.unstaged) indicators.push(paint(fgHex(theme, PALETTE.unstaged), `*${git.unstaged}`));
+			if (git.unstaged) indicators.push(paint(segmentAnsi(theme, "git"), `*${git.unstaged}`));
 			if (git.staged) indicators.push(paint(fgHex(theme, PALETTE.staged), `+${git.staged}`));
 			if (git.untracked) indicators.push(paint(fgHex(theme, PALETTE.untracked), `?${git.untracked}`));
 			if (indicators.length) text += ` ${indicators.join(" ")}`;
