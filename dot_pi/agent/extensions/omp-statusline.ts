@@ -31,9 +31,11 @@ import {
 import type { Component, EditorTheme, TUI, TuiMouseEvent, TuiMouseEventResult } from "@earendil-works/pi-tui";
 import {
 	backgroundAnsi,
+	colorToOkhsl,
 	foregroundAnsi,
 	okhslColor,
 	parseColor,
+	rgbColor,
 	sliceByColumn,
 	stripTerminalSequences,
 	truncateToWidth,
@@ -200,6 +202,28 @@ function overlayCell(line: string, x: number, width: number, text: string): stri
 	return `${before}${RESET}${text}${RESET}${kept}${after.slice(prefix.length)}`;
 }
 
+/**
+ * The gauge fill: a brighter shade of the editor's current border color, which Pi sets from the thinking
+ * level (or bash mode), so the fill follows it while staying distinct from the unfilled rule.
+ */
+function gaugeFillAnsi(theme: Theme, border: (s: string) => string): string {
+	const open = border("x");
+	const rgb = /\x1b\[38;2;(\d+);(\d+);(\d+)m/.exec(open);
+	const indexed = /\x1b\[38;5;(\d+)m/.exec(open);
+	const color = rgb
+		? rgbColor(Number(rgb[1]), Number(rgb[2]), Number(rgb[3]))
+		: indexed
+			? parseColor(Number(indexed[1]))
+			: undefined;
+	if (!color) return theme.getFgAnsi("borderAccent");
+	const { h, s, l } = colorToOkhsl(color);
+	const shade =
+		theme.appearance === "light"
+			? okhslColor(h, Math.min(1, s + 0.15), Math.max(0, l - 0.18))
+			: okhslColor(h, Math.min(1, s + 0.15), Math.min(0.92, l + 0.18));
+	return foregroundAnsi(shade, theme.getColorMode());
+}
+
 function parseGitStatus(stdout: string): GitState {
 	const state: GitState = { staged: 0, unstaged: 0, untracked: 0 };
 	for (const line of stdout.split("\n")) {
@@ -358,10 +382,9 @@ export default function (pi: ExtensionAPI) {
 		const renderGauge = (
 			theme: Theme,
 			gapWidth: number,
-			accent: string | undefined,
 			border: (s: string) => string,
 		): string => {
-			const usedColor = accent ?? theme.getFgAnsi("borderAccent");
+			const usedColor = gaugeFillAnsi(theme, border);
 			const usage = ctx.getContextUsage();
 			const contextWindow = usage?.contextWindow ?? ctx.model?.contextWindow ?? 0;
 			const pct = usage?.percent ?? null;
@@ -440,7 +463,7 @@ export default function (pi: ExtensionAPI) {
 			const leftGroup = group(left, "left");
 			const rightGroup = group(right, "right");
 			const gapWidth = Math.max(0, width - visibleWidth(leftGroup) - visibleWidth(rightGroup));
-			return truncateToWidth(leftGroup + renderGauge(theme, gapWidth, accent, border) + rightGroup, width, "");
+			return truncateToWidth(leftGroup + renderGauge(theme, gapWidth, border) + rightGroup, width, "");
 		};
 
 		// ── Editor ─────────────────────────────────────────────────────────
