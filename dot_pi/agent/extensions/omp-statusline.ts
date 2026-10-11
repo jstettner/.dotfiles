@@ -12,6 +12,9 @@
  * - A one-line prompt stays two rows tall: the last input row is merged into
  *   the bottom border.
  *
+ * - On startup and /new, a comet swirls once around the frame, then the status
+ *   segments wipe in. Set OMP_STATUSLINE_INTRO=0 to skip it.
+ *
  * Icons default to Nerd Font glyphs; set OMP_STATUSLINE_ICONS=unicode to use
  * plain Unicode instead.
  */
@@ -32,6 +35,7 @@ import {
 	okhslColor,
 	parseColor,
 	sliceByColumn,
+	stripTerminalSequences,
 	truncateToWidth,
 	visibleWidth,
 } from "@earendil-works/pi-tui";
@@ -100,6 +104,14 @@ const PADDING_X = 3;
 const MIN_FRAMED_WIDTH = 16;
 const BOTTOM_SENTINEL = "\u0000omp-statusline-bottom";
 
+// Intro: one comet lap around the frame, then the status line wipes in.
+const INTRO_ENABLED = process.env.OMP_STATUSLINE_INTRO !== "0";
+const INTRO_LAP_MS = 1100;
+const INTRO_REVEAL_MS = 500;
+const INTRO_FRAME_MS = 16;
+const COMET_TAIL = 0.22; // fraction of the perimeter
+const SHIMMER_WIDTH = 3;
+
 // Directories whose prefix is dropped from the path segment, as OMP does for ~/Projects.
 const WORK_ROOTS = [
 	path.join(os.homedir(), "src"),
@@ -153,6 +165,39 @@ function displayPath(cwd: string, maxLength: number): string {
 	return display.length <= maxLength ? display : `…${display.slice(-(maxLength - 1))}`;
 }
 
+const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
+const easeOut = (t: number) => 1 - (1 - t) ** 3;
+
+/** Comet color at `k` (0 = head, 1 = tail end): white-hot head fading through the hue wheel. */
+function cometAnsi(theme: Theme, k: number, hueBase: number): string {
+	const hue = (hueBase + k * 220) % 360;
+	const lightness = 0.95 - k * 0.5;
+	const saturation = Math.min(1, 0.2 + k * 2);
+	return foregroundAnsi(okhslColor(hue, saturation, lightness), theme.getColorMode());
+}
+
+const ESCAPE = /\x1b\[[0-9;:?]*[A-Za-z]|\x1b[\]_P^][^\x07\x1b]*(?:\x07|\x1b\\)/;
+
+/**
+ * Replace the cell at column `x` with `text` (one column wide), keeping the styling of the cells after it.
+ * `sliceByColumn` replays every escape before the slice; non-SGR ones already emitted in `before` (Pi's
+ * zero-width cursor marker, OSC 8 links) are dropped so they aren't duplicated.
+ */
+function overlayCell(line: string, x: number, width: number, text: string): string {
+	const before = sliceByColumn(line, 0, x);
+	const after = sliceByColumn(line, x + 1, width - x - 1);
+	const prefix = new RegExp(`^(?:${ESCAPE.source})*`).exec(after)?.[0] ?? "";
+	let emitted = before;
+	const kept = prefix.replace(new RegExp(ESCAPE.source, "g"), code => {
+		if (/^\x1b\[[0-9;:]*m$/.test(code)) return code;
+		const at = emitted.indexOf(code);
+		if (at < 0) return code;
+		emitted = emitted.slice(0, at) + emitted.slice(at + code.length);
+		return "";
+	});
+	return `${before}${RESET}${text}${RESET}${kept}${after.slice(prefix.length)}`;
+}
+
 function parseGitStatus(stdout: string): GitState {
 	const state: GitState = { staged: 0, unstaged: 0, untracked: 0 };
 	for (const line of stdout.split("\n")) {
@@ -182,8 +227,15 @@ export default function (pi: ExtensionAPI) {
 	let spinnerTimer: ReturnType<typeof setInterval> | undefined;
 	let git: GitState = { staged: 0, unstaged: 0, untracked: 0 };
 	let gitRefreshTimer: ReturnType<typeof setTimeout> | undefined;
+	// Intro state: pending until the first framed render starts the clock.
+	let intro: { startedAt?: number; timer?: ReturnType<typeof setInterval> } | undefined;
 
 	const requestRender = () => activeTui?.requestRender();
+
+	const stopIntro = () => {
+		if (intro?.timer) clearInterval(intro.timer);
+		intro = undefined;
+	};
 
 	const stopSpinner = () => {
 		if (spinnerTimer) clearInterval(spinnerTimer);
@@ -227,6 +279,7 @@ export default function (pi: ExtensionAPI) {
 
 	pi.on("session_shutdown", () => {
 		stopSpinner();
+		stopIntro();
 		if (gitRefreshTimer) clearTimeout(gitRefreshTimer);
 		activeTui = undefined;
 	});
@@ -235,6 +288,11 @@ export default function (pi: ExtensionAPI) {
 		if (!ctx.hasUI) return;
 		ctx.ui.setWorkingVisible(false);
 		void refreshGit(ctx.cwd);
+
+		stopIntro();
+		if (INTRO_ENABLED && (_event.reason === "startup" || _event.reason === "new")) {
+			intro = { timer: setInterval(requestRender, INTRO_FRAME_MS) };
+		}
 
 		// ── Segments ───────────────────────────────────────────────────────
 
@@ -406,7 +464,64 @@ export default function (pi: ExtensionAPI) {
 				if (!this.#framed) return super.renderTopBorder(width, hiddenLineCount);
 				const border = (s: string) => this.borderColor(s);
 				const lead = BOX.h.repeat(PADDING_X - 1);
-				return `${border(BOX.tl + lead)}${renderStatusLine(ctx.ui.theme, width - PADDING_X * 2, border)}${border(lead + BOX.tr)}`;
+				const full = `${border(BOX.tl + lead)}${renderStatusLine(ctx.ui.theme, width - PADDING_X * 2, border)}${border(lead + BOX.tr)}`;
+
+				const elapsed = this.#introElapsed();
+				if (elapsed === undefined) return full;
+				const plain = border(BOX.tl + BOX.h.repeat(width - 2) + BOX.tr);
+				if (elapsed < INTRO_LAP_MS) return plain;
+
+				// Reveal: the real status line up to a shimmering edge, plain border after it.
+				const edge = Math.round(easeOut((elapsed - INTRO_LAP_MS) / INTRO_REVEAL_MS) * width);
+				const theme = ctx.ui.theme;
+				const shimmerCount = Math.max(0, Math.min(SHIMMER_WIDTH, width - edge));
+				let shimmer = "";
+				for (let i = 0; i < shimmerCount; i++) {
+					shimmer += paint(cometAnsi(theme, (SHIMMER_WIDTH - 1 - i) / SHIMMER_WIDTH, elapsed / 4), BOX.h);
+				}
+				const restStart = edge + shimmerCount;
+				return `${sliceByColumn(full, 0, edge)}${RESET}${shimmer}${sliceByColumn(plain, restStart, width - restStart)}`;
+			}
+
+			/** Milliseconds into the intro, or undefined once it is over (or disabled). */
+			#introElapsed(): number | undefined {
+				if (!intro) return undefined;
+				intro.startedAt ??= Date.now();
+				const elapsed = Date.now() - intro.startedAt;
+				if (elapsed >= INTRO_LAP_MS + INTRO_REVEAL_MS) {
+					stopIntro();
+					return undefined;
+				}
+				return elapsed;
+			}
+
+			/** Paint the comet over the frame: rows `0..bottom`, clockwise from the top-left corner. */
+			#drawComet(lines: string[], width: number, bottom: number, elapsed: number): void {
+				const sides = Math.max(0, bottom - 1);
+				const perimeter = 2 * width + 2 * sides;
+				const cell = (p: number): [number, number] => {
+					if (p < width) return [0, p];
+					p -= width;
+					if (p < sides) return [1 + p, width - 1];
+					p -= sides;
+					if (p < width) return [bottom, width - 1 - p];
+					p -= width;
+					return [bottom - 1 - p, 0];
+				};
+				const theme = ctx.ui.theme;
+				const t = elapsed / INTRO_LAP_MS;
+				const head = Math.floor(easeInOut(t) * perimeter);
+				// The tail grows out of the start corner and shrinks into it at the end of the lap.
+				const tail = Math.max(1, Math.round(perimeter * COMET_TAIL * Math.sin(Math.PI * Math.min(1, t))));
+				for (let i = Math.min(tail, head + 1) - 1; i >= 0; i--) {
+					const [row, col] = cell(head - i);
+					const glyph = stripTerminalSequences(sliceByColumn(lines[row], col, 1));
+					// Blank cells (an empty prompt in a merged bottom row) get a rule so the comet stays visible.
+					const ch = glyph === "" || glyph === " " ? (row === 0 || row === bottom ? BOX.h : BOX.v) : glyph;
+					const k = i / tail;
+					const styled = i === 0 ? `\x1b[1m${paint(cometAnsi(theme, 0, 0), ch)}` : paint(cometAnsi(theme, k, elapsed / 6), ch);
+					lines[row] = overlayCell(lines[row], col, width, styled);
+				}
 			}
 
 			protected renderBottomBorder(width: number, hiddenLineCount: number): string {
@@ -445,6 +560,11 @@ export default function (pi: ExtensionAPI) {
 					const label = this.#hiddenBelow > 0 ? ` ↓ ${this.#hiddenBelow} more ` : "";
 					const fill = BOX.h.repeat(Math.max(0, width - 2 - visibleWidth(label) - 1));
 					lines[bottomIdx] = border(`${BOX.bl}${BOX.h}${label}${fill}${BOX.br}`);
+				}
+
+				const elapsed = this.#introElapsed();
+				if (elapsed !== undefined && elapsed < INTRO_LAP_MS) {
+					this.#drawComet(lines, width, merge ? lastBody : bottomIdx, elapsed);
 				}
 				return lines.map(line => truncateToWidth(line, width, ""));
 			}
