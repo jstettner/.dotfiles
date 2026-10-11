@@ -78,7 +78,9 @@ const UNICODE: typeof NERD = {
 };
 
 const ICONS = process.env.OMP_STATUSLINE_ICONS === "unicode" ? UNICODE : NERD;
-const SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+// 8-dot braille fills all four dot rows of the cell, so it sits centered against the timer text
+// (6-dot frames use only the top three and ride high).
+const SPINNER = ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"];
 
 // ── Colors (OMP dark.json statusLine* tokens) ───────────────────────────────
 
