@@ -8,7 +8,9 @@
  * - Status segments sit on a filled background inside the editor's top border.
  * - The rule between the left and right groups is the context gauge: filled up
  *   to current usage, with the context percentage anchored at the right.
- * - Named sessions get a stable accent color hashed from the name.
+ * - Left segments take distinct colors from the π logo's pink → cyan palette; git status
+ *   counts keep their own colors.
+ * - Named sessions get a stable accent color hashed from the name (on the name).
  * - A one-line prompt stays two rows tall: the last input row is merged into
  *   the bottom border.
  *
@@ -88,15 +90,15 @@ const SPINNER = ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"];
 
 const PALETTE = {
 	sep: 244,
-	model: "#d787af",
-	path: "#00afaf",
-	gitClean: "#5faf5f",
-	gitDirty: "#d7af5f",
 	staged: 70,
 	unstaged: 178,
 	untracked: 39,
-	cost: 205,
 };
+
+// The left segments take spread-out stops of the π logo's pink → cyan palette (pi-powerline-footer's
+// GRADIENT_COLORS: 199, 171, 135, 99, 75, 51; the model takes 169, a duller cousin of 199), one fixed
+// color per segment so a missing segment doesn't shift the others.
+const SEGMENT_COLOR = { model: 169, path: 135, git: 75, cost: 51 };
 
 const FG_RESET = "\x1b[39m";
 const RESET = "\x1b[0m";
@@ -141,6 +143,10 @@ function fgHex(theme: Theme, value: string | number): string {
 
 function paint(ansi: string, text: string): string {
 	return `${ansi}${text}${FG_RESET}`;
+}
+
+function segmentAnsi(theme: Theme, segment: keyof typeof SEGMENT_COLOR): string {
+	return fgHex(theme, SEGMENT_COLOR[segment]);
 }
 
 /** Stable per-session accent: djb2 hash of the name → OKHSL hue. */
@@ -330,7 +336,7 @@ export default function (pi: ExtensionAPI) {
 			return theme.fg("accent", `${frame} ${timer}`);
 		};
 
-		const modelSegment = (theme: Theme, accent: string | undefined): string | undefined => {
+		const modelSegment = (theme: Theme): string | undefined => {
 			const model = ctx.model;
 			if (!model) return undefined;
 			const name = (model.name || model.id).replace(/^Claude /, "");
@@ -339,17 +345,15 @@ export default function (pi: ExtensionAPI) {
 				const level = pi.getThinkingLevel();
 				text += ` · ${level === "off" ? `${ICONS.off} off` : (ICONS.thinking[level] ?? level)}`;
 			}
-			return paint(accent ?? fgHex(theme, PALETTE.model), text);
+			return paint(segmentAnsi(theme, "model"), text);
 		};
 
 		const pathSegment = (theme: Theme, maxLength: number): string =>
-			paint(fgHex(theme, PALETTE.path), `${ICONS.folder} ${displayPath(ctx.cwd, maxLength)}`);
+			paint(segmentAnsi(theme, "path"), `${ICONS.folder} ${displayPath(ctx.cwd, maxLength)}`);
 
 		const gitSegment = (theme: Theme): string | undefined => {
 			if (!git.branch) return undefined;
-			const dirty = git.staged + git.unstaged + git.untracked > 0;
-			const base = fgHex(theme, dirty ? PALETTE.gitDirty : PALETTE.gitClean);
-			let text = paint(base, `${ICONS.branch} ${git.branch}`);
+			let text = paint(segmentAnsi(theme, "git"), `${ICONS.branch} ${git.branch}`);
 			const indicators: string[] = [];
 			if (git.unstaged) indicators.push(paint(fgHex(theme, PALETTE.unstaged), `*${git.unstaged}`));
 			if (git.staged) indicators.push(paint(fgHex(theme, PALETTE.staged), `+${git.staged}`));
@@ -368,7 +372,7 @@ export default function (pi: ExtensionAPI) {
 			const subscription = ctx.model ? ctx.modelRegistry.isUsingOAuth(ctx.model) : false;
 			if (!cost && !subscription) return undefined;
 			const text = cost ? `$${cost.toFixed(2)}` : ICONS.subscription;
-			return paint(fgHex(theme, PALETTE.cost), text);
+			return paint(segmentAnsi(theme, "cost"), text);
 		};
 
 		const sessionNameSegment = (theme: Theme, accent: string | undefined): string | undefined => {
@@ -418,7 +422,7 @@ export default function (pi: ExtensionAPI) {
 			const build = (pathMax: number) => ({
 				left: segments([
 					["pi", brandSegment(theme)],
-					["model", modelSegment(theme, accent)],
+					["model", modelSegment(theme)],
 					["path", pathSegment(theme, pathMax)],
 					["git", gitSegment(theme)],
 					["cost", costSegment(theme)],
