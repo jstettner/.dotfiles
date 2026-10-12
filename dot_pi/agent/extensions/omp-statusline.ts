@@ -33,8 +33,10 @@ import {
 import type { Component, EditorTheme, TUI, TuiMouseEvent, TuiMouseEventResult } from "@earendil-works/pi-tui";
 import {
 	backgroundAnsi,
+	type Color,
 	colorToOkhsl,
 	foregroundAnsi,
+	mixColors,
 	okhslColor,
 	parseColor,
 	rgbColor,
@@ -113,6 +115,7 @@ const BOTTOM_SENTINEL = "\u0000omp-statusline-bottom";
 const INTRO_ENABLED = process.env.OMP_STATUSLINE_INTRO !== "0";
 const INTRO_LAP_MS = 1100;
 const INTRO_REVEAL_MS = 500;
+// ~60 fps, for the intro and for the glow while a turn runs.
 const INTRO_FRAME_MS = 16;
 const COMET_TAIL = 0.22; // fraction of the perimeter
 const SHIMMER_WIDTH = 3;
@@ -150,14 +153,113 @@ function segmentAnsi(theme: Theme, segment: keyof typeof SEGMENT_COLOR): string 
 
 const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh", "max"];
 
+/** 0 at `off` to 1 at `max`. */
+function levelIntensity(level: string): number {
+	const index = THINKING_LEVELS.indexOf(level);
+	return index < 0 ? 0.5 : index / (THINKING_LEVELS.length - 1);
+}
+
 /** The thinking level in the model's pink, from faint and dusty at `off` to vivid at `max`. */
 function thinkingAnsi(theme: Theme, level: string): string {
-	const index = THINKING_LEVELS.indexOf(level);
-	const t = index < 0 ? 0.5 : index / (THINKING_LEVELS.length - 1);
+	const t = levelIntensity(level);
 	const { h } = colorToOkhsl(parseColor(SEGMENT_COLOR.model));
 	const s = 0.12 + t * 0.88;
 	const l = theme.appearance === "light" ? 0.6 - t * 0.15 : 0.5 + t * 0.22;
 	return foregroundAnsi(okhslColor(h, s, l), theme.getColorMode());
+}
+
+// The spinner and timer while a turn runs: a pulsing pink glow, a white-hot shimmer sweeping across
+// them, and a bloom that tints the status bar's background with each pulse. All of it grows with the
+// thinking level.
+const SEGMENT_BG = "#121212";
+
+// Everything beats on one clock: each PULSE_MS the glow swells quickly to a peak at PULSE_PEAK and then
+// fades slowly, the bloom spreads outward from the spinner as a soft disc of light, and the shimmer
+// crosses the text as the glow peaks. The pulse starts and ends at zero, so between pulses the background is plain and no cell is
+// ever left as a lit block. Terminal cells are hard-edged, so the disc's edge is a wide Gaussian.
+const PULSE_MS = 1500;
+const PULSE_PEAK = 0.22; // fraction of the pulse spent swelling
+const PULSE_REACH = 22; // cells the bloom spreads by the end of a pulse
+
+const pulsePhase = (elapsed: number) => (elapsed % PULSE_MS) / PULSE_MS;
+
+/** How lit the pulse is right now (0-1): 0 at the start and end of each pulse, 1 at PULSE_PEAK. */
+function pulse(elapsed: number): number {
+	const phase = pulsePhase(elapsed);
+	const rising = phase < PULSE_PEAK;
+	const k = rising ? phase / PULSE_PEAK : (1 - phase) / (1 - PULSE_PEAK);
+	// A cosine ease on each side keeps the start, peak, and end free of kinks.
+	return 0.5 - 0.5 * Math.cos(Math.PI * k);
+}
+
+/** Bloom strength (0-1) at `distance` cells from the spinner (negative is to its left). */
+function bloomAmount(elapsed: number, level: string, distance: number): number {
+	const strength = 0.24 + 0.16 * levelIntensity(level);
+	const d = Math.abs(distance);
+	const radius = pulsePhase(elapsed) * PULSE_REACH;
+	const width = 3.5 + pulsePhase(elapsed) * 6;
+	// Inside the disc the bloom is nearly flat (its leading edge a little brighter), so the spinner never
+	// sits in a darker hole with lit cells around it.
+	const inside = d < radius ? 0.7 + 0.3 * Math.exp(-(((radius - d) / 6) ** 2)) : 1;
+	const edge = Math.exp(-((Math.max(0, d - radius) / width) ** 2));
+	const amount = strength * pulse(elapsed) * inside * edge;
+	return Math.min(1, amount);
+}
+
+// Mixing in OKLCH toward a deep, fully saturated magenta keeps faint bloom rich instead of greying out.
+function bloomColor(amount: number): Color {
+	const { h } = colorToOkhsl(parseColor(SEGMENT_COLOR.model));
+	return mixColors(parseColor(SEGMENT_BG), okhslColor(h, 1, 0.42), amount, "oklch");
+}
+
+function bloomBg(theme: Theme, amount: number): string {
+	return backgroundAnsi(bloomColor(amount), theme.getColorMode());
+}
+
+const ESCAPE_AT = /\x1b\[[0-9;:?]*[A-Za-z]|\x1b[\]_P^][^\x07\x1b]*(?:\x07|\x1b\\)/y;
+const graphemes = new Intl.Segmenter();
+
+/** Give every cell of `line` its own background: the bloom at that column, or `baseBg` where it is ~0. */
+function paintBloom(theme: Theme, line: string, baseBg: string, amountAt: (col: number) => number): string {
+	let out = "";
+	let col = 0;
+	let i = 0;
+	while (i < line.length) {
+		ESCAPE_AT.lastIndex = i;
+		const escape = ESCAPE_AT.exec(line);
+		if (escape) {
+			out += escape[0];
+			i += escape[0].length;
+			continue;
+		}
+		const end = line.indexOf("\x1b", i) < 0 ? line.length : line.indexOf("\x1b", i);
+		for (const { segment } of graphemes.segment(line.slice(i, end))) {
+			const amount = amountAt(col);
+			out += `${amount > 0.004 ? bloomBg(theme, amount) : baseBg}${segment}`;
+			col += visibleWidth(segment);
+		}
+		i = end;
+	}
+	return out;
+}
+
+function glowText(theme: Theme, text: string, elapsed: number, level: string): string {
+	const mode = theme.getColorMode();
+	const t = levelIntensity(level);
+	const { h } = colorToOkhsl(parseColor(SEGMENT_COLOR.model));
+	const chars = Array.from(text);
+	const breath = pulse(elapsed);
+	// The sweep crosses the middle of the text at PULSE_PEAK, when the glow peaks, and is offstage after.
+	const sweep = (pulsePhase(elapsed) / (2 * PULSE_PEAK)) * (chars.length + 6) - 3;
+	let out = "";
+	for (let i = 0; i < chars.length; i++) {
+		const shimmer = Math.max(0, 1 - Math.abs(i - sweep) / 1.6);
+		const core = i === 0 ? 0.1 : 0;
+		const l = Math.min(0.97, 0.58 + 0.1 * t + 0.1 * breath + 0.26 * shimmer + core);
+		const s = Math.max(0, 0.55 + 0.35 * t - 0.6 * shimmer);
+		out += `${foregroundAnsi(okhslColor(h, s, l), mode)}${chars[i]}`;
+	}
+	return `${out}${FG_RESET}`;
 }
 
 /** Stable per-session accent: djb2 hash of the name → OKHSL hue. */
@@ -301,7 +403,7 @@ export default function (pi: ExtensionAPI) {
 	pi.on("agent_start", () => {
 		turnStartedAt = Date.now();
 		stopSpinner();
-		spinnerTimer = setInterval(requestRender, 80);
+		spinnerTimer = setInterval(requestRender, INTRO_FRAME_MS);
 		requestRender();
 	});
 
@@ -344,7 +446,7 @@ export default function (pi: ExtensionAPI) {
 			const elapsed = Math.floor((Date.now() - turnStartedAt) / 1000);
 			const timer = elapsed < 60 ? `${elapsed}s` : elapsed < 3600 ? `${Math.floor(elapsed / 60)}m` : `${Math.floor(elapsed / 3600)}h`;
 			const frame = SPINNER[Math.floor(Date.now() / 80) % SPINNER.length];
-			return theme.fg("accent", `${frame} ${timer}`);
+			return glowText(theme, `${frame} ${timer}`, Date.now() - turnStartedAt, pi.getThinkingLevel());
 		};
 
 		const modelSegment = (theme: Theme): string | undefined => {
@@ -423,7 +525,7 @@ export default function (pi: ExtensionAPI) {
 		const renderStatusLine = (theme: Theme, width: number, border: (s: string) => string): string => {
 			const accent = sessionAccent(theme, pi.getSessionName());
 			const mode = theme.getColorMode();
-			const segmentBg = parseColor("#121212");
+			const segmentBg = parseColor(SEGMENT_BG);
 			const bgAnsi = backgroundAnsi(segmentBg, mode);
 			const capAnsi = foregroundAnsi(segmentBg, mode);
 			const sepAnsi = fgHex(theme, PALETTE.sep);
@@ -447,8 +549,17 @@ export default function (pi: ExtensionAPI) {
 				if (parts.length === 0) return "";
 				const sep = direction === "left" ? ICONS.sepLeft : ICONS.sepRight;
 				const texts = parts.map(p => p.text);
-				const body = `${bgAnsi}${textAnsi} ${texts.join(` ${sepAnsi}${sep}${textAnsi} `)} ${RESET}`;
-				const leftCap = ICONS.capLeft ? `${capAnsi}${ICONS.capLeft}${RESET}` : "";
+				// While a turn runs the bloom is painted across the whole group; the spinner sits at body
+				// column 1, after the padding cell. It also tints the rounded cap, so the halo fades out at
+				// the pill's edge instead of stopping at a hard line.
+				const glowing = parts[0].id === "pi" && turnStartedAt !== undefined;
+				const bloomAt = (distance: number) =>
+					bloomAmount(Date.now() - (turnStartedAt ?? 0), pi.getThinkingLevel(), distance);
+				const plain = `${bgAnsi}${textAnsi} ${texts.join(` ${sepAnsi}${sep}${textAnsi} `)} ${RESET}`;
+				const body = glowing ? paintBloom(theme, plain, bgAnsi, col => bloomAt(col - 1)) : plain;
+				const leftCapAnsi =
+					glowing && direction === "left" ? foregroundAnsi(bloomColor(bloomAt(-2)), mode) : capAnsi;
+				const leftCap = ICONS.capLeft ? `${leftCapAnsi}${ICONS.capLeft}${RESET}` : "";
 				const rightCap = ICONS.capRight ? `${capAnsi}${ICONS.capRight}${RESET}` : "";
 				return leftCap + body + rightCap;
 			};
