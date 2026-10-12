@@ -3,6 +3,13 @@ onboarding = false
 [ui]
 mouse_capture = true
 
+# pi-subagent children render as "↳ name" under their parent agent; their shared tab label is redundant.
+[ui.sidebar.agents]
+rows = [
+  ["state_icon", "machine", "workspace", { token = "tab", rules = [{ equals = "subagents", hide = true }] }],
+  [{ token = "agent", rules = [{ starts_with = "↳", dim = true }] }],
+]
+
 [worktrees]
 directory = "~/wt"
 
