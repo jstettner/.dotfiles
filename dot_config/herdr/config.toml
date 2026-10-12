@@ -7,9 +7,8 @@ mouse_capture = true
 [ui.sidebar.agents]
 rows = [
   ["state_icon", "machine", "workspace", { token = "tab", rules = [{ equals = "subagents", hide = true }] }],
-  [{ token = "agent", rules = [{ starts_with = "↳", dim = true }] }],
-  # Reported by ~/.pi/agent/extensions/herdr-activity.ts; the row disappears when idle.
-  [{ token = "$doing", dim = true }],
+  # $doing is reported by ~/.pi/agent/extensions/herdr-activity.ts and disappears when idle.
+  [{ token = "agent", rules = [{ starts_with = "↳", dim = true }] }, { token = "$doing", dim = true }],
 ]
 
 [worktrees]
