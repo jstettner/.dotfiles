@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+# chezmoi passes the current ~/.claude/settings.json on stdin and writes back stdout.
+# Only the herdr-activity hooks are managed here; Claude and Herdr's own changes
+# (model, effort, plugins, Herdr's SessionStart hook) are kept as they are on disk.
+import json
+import sys
+
+SCRIPT = '"$HOME/.claude/hooks/herdr-activity.py"'
+HOOKS = {
+    "UserPromptSubmit": ("prompt", None),
+    "PreToolUse": ("pre-tool", "*"),
+    "PostToolUse": ("post-tool", "*"),
+    "Stop": ("stop", None),
+    "SessionEnd": ("end", None),
+}
+
+current = sys.stdin.read()
+try:
+    settings = json.loads(current) if current.strip() else {}
+except json.JSONDecodeError:
+    # Leave a file we can't parse alone rather than overwrite it.
+    sys.stdout.write(current)
+    sys.exit(0)
+
+hooks = settings.setdefault("hooks", {})
+for event, (arg, matcher) in HOOKS.items():
+    # Drop any previous herdr-activity entry so reapplying stays idempotent.
+    entries = [
+        entry
+        for entry in hooks.get(event, [])
+        if not any("herdr-activity.py" in hook.get("command", "") for hook in entry.get("hooks", []))
+    ]
+    entry = {"hooks": [{"type": "command", "command": f"python3 {SCRIPT} {arg}", "timeout": 5}]}
+    if matcher:
+        entry = {"matcher": matcher, **entry}
+    hooks[event] = entries + [entry]
+
+sys.stdout.write(json.dumps(settings, indent=2, ensure_ascii=False) + "\n")
