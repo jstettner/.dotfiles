@@ -8,6 +8,8 @@ mouse_capture = true
 rows = [
   ["state_icon", "machine", "workspace", { token = "tab", rules = [{ equals = "subagents", hide = true }] }],
   [{ token = "agent", rules = [{ starts_with = "↳", dim = true }] }],
+  # Reported by ~/.pi/agent/extensions/herdr-activity.ts; the row disappears when idle.
+  [{ token = "$doing", dim = true }],
 ]
 
 [worktrees]
