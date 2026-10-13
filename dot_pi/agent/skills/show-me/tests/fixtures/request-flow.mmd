@@ -1,0 +1,14 @@
+sequenceDiagram
+    participant C as API Client
+    participant G as Gateway Worker
+    participant K as Edge KV
+    participant I as Inference Routing Service
+    participant P as External Model Provider
+    C->>G: Request + bearer key
+    G->>K: Look up key and route
+    K-->>G: Edge configuration
+    G->>I: Rewritten request
+    I->>P: Call upstream
+    P-->>I: Response stream
+    I-->>G: Response stream
+    G-->>C: Response stream
