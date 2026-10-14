@@ -23,7 +23,7 @@
 font-family = IosevkaTerm Nerd Font
 #font-family = Panama Monospace
 #font-style = Bold
-font-size = 18
+font-size = 16
 background-opacity = 0.73
 background-blur = 60
 theme = Solarized Dark Higher Contrast
