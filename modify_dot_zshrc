@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+"""Manage only the lazy NVM block, preserving machine-local shell settings."""
+import re
+import sys
+
+BEGIN = "# >>> chezmoi lazy-nvm >>>"
+END = "# <<< chezmoi lazy-nvm <<<"
+LAZY = '''# Load NVM on the first Node command instead of delaying every new shell.
+export NVM_DIR="$HOME/.nvm"
+if [[ -s /opt/homebrew/opt/nvm/nvm.sh ]]; then
+  function nvm node npm npx corepack {
+    local nvm_command=${funcstack[1]}
+    unfunction nvm node npm npx corepack
+    source /opt/homebrew/opt/nvm/nvm.sh || return $?
+    [[ ! -s /opt/homebrew/opt/nvm/etc/bash_completion.d/nvm ]] ||
+      source /opt/homebrew/opt/nvm/etc/bash_completion.d/nvm
+    "$nvm_command" "$@"
+  }
+fi
+'''
+EAGER = '''# Node version manager
+export NVM_DIR="$HOME/.nvm"
+[ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && . "/opt/homebrew/opt/nvm/nvm.sh"
+[ -s "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm" ] && . "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm"
+'''
+
+
+def modify(current):
+    block = BEGIN + "\n" + LAZY + END + "\n"
+    if BEGIN in current or END in current:
+        pattern = re.compile(r"(?m)^" + re.escape(BEGIN) + r"\n[\s\S]*?^" + re.escape(END) + r"(?:\n|$)")
+        matches = list(pattern.finditer(current))
+        if len(matches) != 1 or current.count(BEGIN) != 1 or current.count(END) != 1:
+            raise ValueError("Malformed lazy-nvm markers; leaving .zshrc unchanged")
+        return pattern.sub(lambda _: block, current)
+    for previous in (LAZY, EAGER):
+        if current.count(previous) == 1:
+            return current.replace(previous, block, 1)
+    if re.search(r"(?m)^[^#\n]*nvm\.sh", current):
+        raise ValueError("Unrecognized NVM initialization; migrate it manually before applying")
+    separator = "" if not current or current.endswith("\n") else "\n"
+    return current + separator + block
+
+
+if __name__ == "__main__":
+    try:
+        sys.stdout.write(modify(sys.stdin.read()))
+    except ValueError as error:
+        sys.exit(str(error))

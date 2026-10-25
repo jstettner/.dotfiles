@@ -4,6 +4,15 @@
 sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin init --apply --source ~/src/dotfiles https://github.com/jstettner/.dotfiles.git
 ```
 
+## Zsh
+
+`modify_dot_zshrc` manages only the marked lazy-NVM block, preserving machine-local
+aliases, PATH settings, plugins, and other shell configuration. It requires Python 3
+and migrates the previously tracked eager or lazy Homebrew NVM block in place.
+Unrecognized NVM initialization fails without changing the file, so it can be
+reviewed manually instead of loading NVM twice. Do not use `chezmoi add ~/.zshrc`:
+it would replace the modifier with a full-file snapshot.
+
 ## Zed
 
 Chezmoi tracks `~/.config/zed/settings.json` and `~/.config/zed/keymap.json`.
