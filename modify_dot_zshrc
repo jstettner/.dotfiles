@@ -5,7 +5,7 @@ import sys
 
 BEGIN = "# >>> chezmoi lazy-nvm >>>"
 END = "# <<< chezmoi lazy-nvm <<<"
-LAZY = '''# Load NVM on the first Node command instead of delaying every new shell.
+LEGACY_LAZY = '''# Load NVM on the first Node command instead of delaying every new shell.
 export NVM_DIR="$HOME/.nvm"
 if [[ -s /opt/homebrew/opt/nvm/nvm.sh ]]; then
   function nvm node npm npx corepack {
@@ -17,6 +17,27 @@ if [[ -s /opt/homebrew/opt/nvm/nvm.sh ]]; then
     "$nvm_command" "$@"
   }
 fi
+'''
+LAZY = '''# Load NVM on the first Node command instead of delaying every new shell.
+export NVM_DIR="$HOME/.nvm"
+if [[ -s /opt/homebrew/opt/nvm/nvm.sh || -s "$NVM_DIR/nvm.sh" ]]; then
+  function nvm node npm npx corepack {
+    local nvm_command=${funcstack[1]}
+    unfunction nvm node npm npx corepack
+    if [[ -s /opt/homebrew/opt/nvm/nvm.sh ]]; then
+      source /opt/homebrew/opt/nvm/nvm.sh || return $?
+      [[ ! -s /opt/homebrew/opt/nvm/etc/bash_completion.d/nvm ]] ||
+        source /opt/homebrew/opt/nvm/etc/bash_completion.d/nvm
+    else
+      source "$NVM_DIR/nvm.sh" || return $?
+    fi
+    "$nvm_command" "$@"
+  }
+fi
+'''
+LOCAL_EAGER = '''# Remove inherited NVM version paths so nvm.sh can put the selected version first.
+path=(${path:#$HOME/.nvm/versions/node/*/bin})
+source ~/.nvm/nvm.sh
 '''
 EAGER = '''# Node version manager
 export NVM_DIR="$HOME/.nvm"
@@ -33,7 +54,7 @@ def modify(current):
         if len(matches) != 1 or current.count(BEGIN) != 1 or current.count(END) != 1:
             raise ValueError("Malformed lazy-nvm markers; leaving .zshrc unchanged")
         return pattern.sub(lambda _: block, current)
-    for previous in (LAZY, EAGER):
+    for previous in (LAZY, LEGACY_LAZY, EAGER, LOCAL_EAGER):
         if current.count(previous) == 1:
             return current.replace(previous, block, 1)
     if re.search(r"(?m)^[^#\n]*nvm\.sh", current):

@@ -8,7 +8,9 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin init --apply --source ~/
 
 `modify_dot_zshrc` manages only the marked lazy-NVM block, preserving machine-local
 aliases, PATH settings, plugins, and other shell configuration. It requires Python 3
-and migrates the previously tracked eager or lazy Homebrew NVM block in place.
+and migrates the previously tracked eager or lazy Homebrew NVM block, or the
+local `~/.nvm/nvm.sh` setup with inherited PATH cleanup, in place. The lazy loader
+supports both Homebrew and `~/.nvm` installations.
 Unrecognized NVM initialization fails without changing the file, so it can be
 reviewed manually instead of loading NVM twice. Do not use `chezmoi add ~/.zshrc`:
 it would replace the modifier with a full-file snapshot.

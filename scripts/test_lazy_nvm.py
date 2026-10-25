@@ -1,6 +1,8 @@
 from pathlib import Path
+import os
 import runpy
 import subprocess
+import tempfile
 import unittest
 
 
@@ -20,7 +22,7 @@ class LazyNvmTests(unittest.TestCase):
                 self.assertEqual(syntax.returncode, 0, syntax.stderr)
 
     def test_migrates_existing_eager_and_lazy_blocks_in_place(self):
-        for previous in (MODULE["EAGER"], MODULE["LAZY"]):
+        for previous in (MODULE["EAGER"], MODULE["LOCAL_EAGER"], MODULE["LEGACY_LAZY"], MODULE["LAZY"]):
             with self.subTest(previous=previous):
                 prefix = "export BEFORE=local\n\n"
                 suffix = "\nalias after='echo local'\n"
@@ -29,6 +31,22 @@ class LazyNvmTests(unittest.TestCase):
                 self.assertTrue(result.endswith(MODULE["END"] + "\n" + suffix))
                 self.assertEqual(result.count(MODULE["LAZY"]), 1)
                 self.assertEqual(modify(result), result)
+
+    @unittest.skipIf(Path("/opt/homebrew/opt/nvm/nvm.sh").exists(), "Homebrew NVM takes precedence")
+    def test_local_nvm_loads_only_on_first_node_command(self):
+        with tempfile.TemporaryDirectory() as home:
+            nvm = Path(home) / ".nvm"
+            nvm.mkdir()
+            (nvm / "nvm.sh").write_text(
+                'print loaded\nfunction node { print "node:$*"; }\n'
+            )
+            result = subprocess.run(
+                ["zsh", "-f"],
+                input=modify("") + '\nprint ready\nnode first\nnode second\n',
+                env={**os.environ, "HOME": home}, text=True, capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, "ready\nloaded\nnode:first\nnode:second\n")
 
     def test_updates_managed_block_without_changing_surroundings(self):
         current = "# before\n" + MODULE["BEGIN"] + "\nobsolete\n" + MODULE["END"] + "\n# after\n"
