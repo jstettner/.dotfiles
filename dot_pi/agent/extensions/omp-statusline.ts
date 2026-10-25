@@ -803,7 +803,10 @@ export default function (pi: ExtensionAPI) {
 				dispose: unsubscribe,
 				invalidate() {},
 				render(width: number): string[] {
-					const statuses = [...footerData.getExtensionStatuses().values()].filter(Boolean);
+					// Hide HumanLayer's idle/off badge locally; preserve active and error statuses.
+					const statuses = [...footerData.getExtensionStatuses()]
+						.filter(([key, text]) => text && !(key === "humanlayer" && stripTerminalSequences(text).trim() === "HumanLayer: off"))
+						.map(([, text]) => text);
 					if (statuses.length === 0) return [];
 					return [truncateToWidth(` ${theme.fg("dim", statuses.join(" · "))}`, width)];
 				},
