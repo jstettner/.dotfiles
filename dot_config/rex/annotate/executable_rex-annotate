@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Run plannotator-tui's Herdr launcher against a Rex block, with herdr-shim standing in for herdr.
+#   rex-annotate open|last|terminal BLOCK [plannotator-tui args...]
+# Feedback is sent back to BLOCK, which is normally the agent's pane.
+set -euo pipefail
+
+here="$(cd "$(dirname "$0")" && pwd)"
+sub="${1:?usage: rex-annotate open|last|terminal BLOCK}"
+block="${2:?usage: rex-annotate open|last|terminal BLOCK}"
+shift 2
+
+# Actions run with the server's bare environment, where neither rex nor REX_BIN_DIR is set.
+if [ -z "${REX_BIN_DIR:-}" ] && ! command -v rex >/dev/null; then
+  export REX_BIN_DIR="$HOME/Library/Application Support/com.superlogical.rex/RexServer/Versions/Current/Rex Server.app/Contents/MacOS"
+fi
+rex="${REX_BIN_DIR:+$REX_BIN_DIR/}rex"
+
+if [ -z "${PLANNOTATOR_TUI_BIN:-}" ]; then
+  PLANNOTATOR_TUI_BIN="$(command -v plannotator-tui || true)"
+fi
+if [ -z "$PLANNOTATOR_TUI_BIN" ]; then
+  # Reuse the binary Herdr Annotate already fetched.
+  PLANNOTATOR_TUI_BIN="$(ls -d "$HOME"/.config/herdr/plugins/github/annotate-*/bin/plannotator-tui.exe 2>/dev/null | head -n 1)"
+fi
+if [ ! -x "$PLANNOTATOR_TUI_BIN" ]; then
+  echo "rex-annotate: plannotator-tui not found; set PLANNOTATOR_TUI_BIN" >&2
+  exit 1
+fi
+
+# Open the folder the agent is working in.
+cwd="$("$rex" block call -b "$block" process | /usr/bin/python3 -I -c '
+import json, sys
+info = json.load(sys.stdin)
+print((info.get("foreground") or {}).get("cwd") or (info.get("ancestors") or [{}])[0].get("cwd") or "")
+' || true)"
+cd "${cwd:-$HOME}"
+
+export HERDR_ENV=1 HERDR_BIN_PATH="$here/herdr-shim" HERDR_PANE_ID="$block" HERDR_PLUGIN_ID=annotate
+export PLANNOTATOR_TUI_BIN
+exec "$PLANNOTATOR_TUI_BIN" herdr "$sub" "$@"

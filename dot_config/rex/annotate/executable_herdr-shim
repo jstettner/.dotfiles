@@ -1,0 +1,136 @@
+#!/usr/bin/env -S python3 -I
+"""A stand-in for the `herdr` binary that plannotator-tui calls, backed by Rex.
+
+plannotator-tui's Herdr mode runs `$HERDR_BIN_PATH <subcommand>` to open its review pane,
+find the agent behind a pane, read a pane's output, and send feedback. This script answers
+the handful of subcommands it uses by calling `rex` instead. Pane ids are Rex block ids.
+"""
+
+import json
+import os
+import shutil
+import subprocess
+import sys
+import time
+
+SHIM = os.path.abspath(__file__)
+REX = os.path.join(os.environ.get("REX_BIN_DIR", ""), "rex")
+if not os.path.isfile(REX):
+    REX = shutil.which("rex") or "rex"
+
+# Process names plannotator-tui can read transcripts for (see known_host in its launch.rs).
+KNOWN_AGENTS = {"claude", "codex", "pi", "opencode"}
+
+
+def rex(*args, check=True, input=None):
+    result = subprocess.run([REX, *args], capture_output=True, text=True, input=input)
+    if check and result.returncode != 0:
+        fail(f"rex {' '.join(args[:2])}: {result.stderr.strip()}")
+    return result.stdout
+
+
+def fail(message, code="failed"):
+    # Herdr reports refusals as a JSON envelope on stderr; plannotator-tui shows the message.
+    print(json.dumps({"error": {"code": code, "message": message}}), file=sys.stderr)
+    sys.exit(1)
+
+
+def flag(args, name, default=None):
+    if name in args:
+        i = args.index(name)
+        if i + 1 < len(args):
+            return args[i + 1]
+    return default
+
+
+def foreground(block):
+    info = json.loads(rex("block", "call", "-b", block, "process"))
+    fg = info.get("foreground") or info.get("child") or {}
+    # Node-based agents run as `node`; argv0 keeps the name they were started as (`pi`).
+    name = os.path.basename(fg.get("argv0") or fg.get("name") or "")
+    return fg.get("pid"), name
+
+
+def tui():
+    return os.environ.get("PLANNOTATOR_TUI_BIN") or shutil.which("plannotator-tui") or "plannotator-tui"
+
+
+def plugin_pane_open(args):
+    """`plugin pane open ... --placement P [--direction D] [--target-pane B] --cwd C --env K=V...`"""
+    placement = flag(args, "--placement", "overlay")
+    anchor = flag(args, "--target-pane") or os.environ.get("HERDR_PANE_ID")
+    if not anchor:
+        fail("no pane to open beside")
+    envs = [args[i + 1] for i, a in enumerate(args[:-1]) if a == "--env"]
+    envs += ["HERDR_ENV=1", f"HERDR_BIN_PATH={SHIM}", f"REX_BIN_DIR={os.path.dirname(REX)}"]
+    if os.environ.get("PLANNOTATOR_TUI_BIN"):
+        envs.append(f"PLANNOTATOR_TUI_BIN={os.environ['PLANNOTATOR_TUI_BIN']}")
+    direction = {"right": "right", "left": "left", "down": "below", "up": "above"}.get(
+        flag(args, "--direction", "right"), "right"
+    )
+    cmd = ["split", "-b", anchor, "--split", direction, "--focus", "--json", "--label", "annotate"]
+    if flag(args, "--cwd"):
+        cmd += ["-c", flag(args, "--cwd")]
+    cmd += ["--shell", "none", "--", "/usr/bin/env", *envs, tui(), "herdr", "pane"]
+    created = json.loads(rex(*cmd))
+    # Rex has no overlay or popup layer for this, so cover the window by zooming the split.
+    if placement in ("overlay", "popup") and created.get("block_ids"):
+        rex("zoom", "-b", created["block_ids"][0], "--on", check=False)
+
+
+def pane_process_info(args):
+    pid, name = foreground(flag(args, "--pane"))
+    if pid is None:
+        fail("pane has no foreground process")
+    process = {"pid": pid, "name": name}
+    print(json.dumps({"result": {"process_info": {
+        "foreground_processes": [process],
+        "foreground_process_group_id": pid,
+    }}}))
+
+
+def pane_get(args):
+    _, name = foreground(args[0])
+    pane = {"pane_id": args[0]}
+    if name in KNOWN_AGENTS:
+        pane["agent"] = name
+    print(json.dumps({"result": {"pane": pane}}))
+
+
+def pane_read(args):
+    text = rex("capture", "-b", args[0], "--unwrap", "--trim")
+    lines = int(flag(args, "--lines", "500"))
+    sys.stdout.write("\n".join(text.splitlines()[-lines:]) + "\n")
+
+
+def agent_prompt(args):
+    block, feedback = args[0], args[1]
+    # Paste as one bracketed block so newlines don't submit early, then press Enter.
+    rex("send", "-b", block, input=f"\x1b[200~{feedback}\x1b[201~")
+    time.sleep(0.15)
+    rex("send-key", "-b", block, "enter")
+
+
+def main(argv):
+    head, rest = tuple(argv[:2]), argv[2:]
+    if tuple(argv[:3]) == ("plugin", "pane", "open"):
+        plugin_pane_open(argv[3:])
+    elif head == ("pane", "process-info"):
+        pane_process_info(rest)
+    elif head == ("pane", "get"):
+        pane_get(rest)
+    elif head in (("pane", "read"), ("agent", "read")):
+        pane_read(rest)
+    elif head == ("agent", "prompt"):
+        agent_prompt(rest)
+    elif head == ("agent", "get"):
+        # No exact session id to offer; plannotator-tui falls back to process info.
+        fail("agent sessions are not tracked in Rex", "not_found")
+    elif argv[:1] == ["notification"]:
+        pass
+    else:
+        fail(f"herdr-shim: unsupported command: {' '.join(argv)}", "unsupported")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
