@@ -34,7 +34,9 @@ import type { Component, EditorTheme, TUI, TuiMouseEvent, TuiMouseEventResult } 
 import {
 	backgroundAnsi,
 	type Color,
+	colorToHex,
 	colorToOkhsl,
+	colorToRgb,
 	foregroundAnsi,
 	mixColors,
 	okhslColor,
@@ -88,10 +90,16 @@ const ICONS = process.env.OMP_STATUSLINE_ICONS === "unicode" ? UNICODE : NERD;
 // (6-dot frames use only the top three and ride high).
 const SPINNER = ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"];
 
-// ── Colors (OMP dark.json statusLine* tokens) ───────────────────────────────
+// ── Colors (OMP dark.json / light.json statusLine* tokens) ──────────────────
+
+// The pill fill and separator per appearance (OMP's statusLineBg / statusLineSep). Every other color on
+// the pill is a dark-theme color, darkened on light themes until it reads against the fill (`onPill`).
+const PILL = {
+	dark: { bg: "#121212", sep: 244 },
+	light: { bg: "#e0e0e0", sep: "#808080" },
+};
 
 const PALETTE = {
-	sep: 244,
 	staged: 70,
 	untracked: 39,
 };
@@ -147,8 +155,57 @@ function paint(ansi: string, text: string): string {
 	return `${ansi}${text}${FG_RESET}`;
 }
 
+const isLight = (theme: Theme) => theme.appearance === "light";
+const pill = (theme: Theme) => (isLight(theme) ? PILL.light : PILL.dark);
+const pillBg = (theme: Theme): Color => parseColor(pill(theme).bg);
+
+/** WCAG relative luminance. */
+function luminance(color: Color): number {
+	const { r, g, b } = colorToRgb(color);
+	const channel = (v: number) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+	return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+}
+
+function contrast(a: Color, b: Color): number {
+	const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+	return (hi + 0.05) / (lo + 0.05);
+}
+
+// WCAG AA for normal text.
+const MIN_CONTRAST = 4.5;
+const onPillCache = new Map<string, Color>();
+
+/**
+ * `value` as text on the pill. Dark themes use it as is; light themes keep its hue and saturation and
+ * bisect its lightness down until it meets MIN_CONTRAST against the light fill (OMP darkens its session
+ * accents the same way).
+ */
+function onPill(theme: Theme, value: string | number | Color): string {
+	const color = typeof value === "object" ? value : parseColor(value);
+	if (!isLight(theme)) return foregroundAnsi(color, theme.getColorMode());
+	const bg = pillBg(theme);
+	const key = `${colorToHex(color)}/${colorToHex(bg)}`;
+	let fitted = onPillCache.get(key);
+	if (!fitted) {
+		fitted = color;
+		if (contrast(color, bg) < MIN_CONTRAST) {
+			const { h, s, l } = colorToOkhsl(color);
+			let lo = 0;
+			let hi = l;
+			for (let i = 0; i < 20; i++) {
+				const mid = (lo + hi) / 2;
+				if (contrast(okhslColor(h, s, mid), bg) >= MIN_CONTRAST) lo = mid;
+				else hi = mid;
+			}
+			fitted = okhslColor(h, s, lo);
+		}
+		onPillCache.set(key, fitted);
+	}
+	return foregroundAnsi(fitted, theme.getColorMode());
+}
+
 function segmentAnsi(theme: Theme, segment: keyof typeof SEGMENT_COLOR): string {
-	return fgHex(theme, SEGMENT_COLOR[segment]);
+	return onPill(theme, SEGMENT_COLOR[segment]);
 }
 
 const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh", "max"];
@@ -164,14 +221,14 @@ function thinkingAnsi(theme: Theme, level: string): string {
 	const t = levelIntensity(level);
 	const { h } = colorToOkhsl(parseColor(SEGMENT_COLOR.model));
 	const s = 0.12 + t * 0.88;
-	const l = theme.appearance === "light" ? 0.6 - t * 0.15 : 0.5 + t * 0.22;
+	const l = isLight(theme) ? 0.62 - t * 0.2 : 0.5 + t * 0.22;
 	return foregroundAnsi(okhslColor(h, s, l), theme.getColorMode());
 }
 
 // The spinner and timer while a turn runs: a pulsing pink glow, a white-hot shimmer sweeping across
 // them, and a bloom that tints the status bar's background with each pulse. All of it grows with the
-// thinking level.
-const SEGMENT_BG = "#121212";
+// thinking level. On light themes the glow deepens instead: the shimmer is ink-dark and the bloom a
+// pale pink wash.
 
 // Everything beats on one clock: each PULSE_MS the glow swells quickly to a peak at PULSE_PEAK and then
 // fades slowly, the bloom spreads outward from the spinner as a soft disc of light, and the shimmer
@@ -206,14 +263,15 @@ function bloomAmount(elapsed: number, level: string, distance: number): number {
 	return Math.min(1, amount);
 }
 
-// Mixing in OKLCH toward a deep, fully saturated magenta keeps faint bloom rich instead of greying out.
-function bloomColor(amount: number): Color {
+// Mixing in OKLCH toward a fully saturated magenta keeps faint bloom rich instead of greying out: a deep
+// one on dark themes, a pale one on light themes (so the dark glow text stays readable over it).
+function bloomColor(theme: Theme, amount: number): Color {
 	const { h } = colorToOkhsl(parseColor(SEGMENT_COLOR.model));
-	return mixColors(parseColor(SEGMENT_BG), okhslColor(h, 1, 0.42), amount, "oklch");
+	return mixColors(pillBg(theme), okhslColor(h, 1, isLight(theme) ? 0.8 : 0.42), amount, "oklch");
 }
 
 function bloomBg(theme: Theme, amount: number): string {
-	return backgroundAnsi(bloomColor(amount), theme.getColorMode());
+	return backgroundAnsi(bloomColor(theme, amount), theme.getColorMode());
 }
 
 const ESCAPE_AT = /\x1b\[[0-9;:?]*[A-Za-z]|\x1b[\]_P^][^\x07\x1b]*(?:\x07|\x1b\\)/y;
@@ -255,7 +313,9 @@ function glowText(theme: Theme, text: string, elapsed: number, level: string): s
 	for (let i = 0; i < chars.length; i++) {
 		const shimmer = Math.max(0, 1 - Math.abs(i - sweep) / 1.6);
 		const core = i === 0 ? 0.1 : 0;
-		const l = Math.min(0.97, 0.58 + 0.1 * t + 0.1 * breath + 0.26 * shimmer + core);
+		const l = isLight(theme)
+			? Math.max(0.15, 0.44 - 0.06 * t - 0.08 * breath - 0.24 * shimmer - core)
+			: Math.min(0.97, 0.58 + 0.1 * t + 0.1 * breath + 0.26 * shimmer + core);
 		const s = Math.max(0, 0.55 + 0.35 * t - 0.6 * shimmer);
 		out += `${foregroundAnsi(okhslColor(h, s, l), mode)}${chars[i]}`;
 	}
@@ -269,8 +329,7 @@ function sessionAccent(theme: Theme, name: string | undefined): string | undefin
 	for (let i = 0; i < name.length; i++) {
 		hash = (((hash << 5) + hash) ^ name.charCodeAt(i)) >>> 0;
 	}
-	const lightness = theme.appearance === "light" ? 0.45 : 0.72;
-	return foregroundAnsi(okhslColor(hash % 360, 0.75, lightness), theme.getColorMode());
+	return onPill(theme, okhslColor(hash % 360, 0.75, 0.72));
 }
 
 function formatPercent(pct: number): string {
@@ -291,10 +350,13 @@ function displayPath(cwd: string, maxLength: number): string {
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
 const easeOut = (t: number) => 1 - (1 - t) ** 3;
 
-/** Comet color at `k` (0 = head, 1 = tail end): white-hot head fading through the hue wheel. */
+/**
+ * Comet color at `k` (0 = head, 1 = tail end): a white-hot head (ink-dark on light themes) fading
+ * through the hue wheel toward the background.
+ */
 function cometAnsi(theme: Theme, k: number, hueBase: number): string {
 	const hue = (hueBase + k * 220) % 360;
-	const lightness = 0.95 - k * 0.5;
+	const lightness = isLight(theme) ? 0.25 + k * 0.45 : 0.95 - k * 0.5;
 	const saturation = Math.min(1, 0.2 + k * 2);
 	return foregroundAnsi(okhslColor(hue, saturation, lightness), theme.getColorMode());
 }
@@ -337,7 +399,7 @@ function gaugeFillAnsi(theme: Theme, border: (s: string) => string): string {
 	if (!color) return theme.getFgAnsi("borderAccent");
 	const { h, s, l } = colorToOkhsl(color);
 	const shade =
-		theme.appearance === "light"
+		isLight(theme)
 			? okhslColor(h, Math.min(1, s + 0.15), Math.max(0, l - 0.18))
 			: okhslColor(h, Math.min(1, s + 0.15), Math.min(0.92, l + 0.18));
 	return foregroundAnsi(shade, theme.getColorMode());
@@ -471,8 +533,8 @@ export default function (pi: ExtensionAPI) {
 			let text = paint(segmentAnsi(theme, "git"), `${ICONS.branch} ${git.branch}`);
 			const indicators: string[] = [];
 			if (git.unstaged) indicators.push(paint(segmentAnsi(theme, "git"), `*${git.unstaged}`));
-			if (git.staged) indicators.push(paint(fgHex(theme, PALETTE.staged), `+${git.staged}`));
-			if (git.untracked) indicators.push(paint(fgHex(theme, PALETTE.untracked), `?${git.untracked}`));
+			if (git.staged) indicators.push(paint(onPill(theme, PALETTE.staged), `+${git.staged}`));
+			if (git.untracked) indicators.push(paint(onPill(theme, PALETTE.untracked), `?${git.untracked}`));
 			if (indicators.length) text += ` ${indicators.join(" ")}`;
 			return text;
 		};
@@ -525,10 +587,10 @@ export default function (pi: ExtensionAPI) {
 		const renderStatusLine = (theme: Theme, width: number, border: (s: string) => string): string => {
 			const accent = sessionAccent(theme, pi.getSessionName());
 			const mode = theme.getColorMode();
-			const segmentBg = parseColor(SEGMENT_BG);
+			const segmentBg = pillBg(theme);
 			const bgAnsi = backgroundAnsi(segmentBg, mode);
 			const capAnsi = foregroundAnsi(segmentBg, mode);
-			const sepAnsi = fgHex(theme, PALETTE.sep);
+			const sepAnsi = fgHex(theme, pill(theme).sep);
 			const textAnsi = theme.getFgAnsi("text");
 
 			type Segment = { id: string; text: string };
@@ -558,7 +620,7 @@ export default function (pi: ExtensionAPI) {
 				const plain = `${bgAnsi}${textAnsi} ${texts.join(` ${sepAnsi}${sep}${textAnsi} `)} ${RESET}`;
 				const body = glowing ? paintBloom(theme, plain, bgAnsi, col => bloomAt(col - 1)) : plain;
 				const leftCapAnsi =
-					glowing && direction === "left" ? foregroundAnsi(bloomColor(bloomAt(-2)), mode) : capAnsi;
+					glowing && direction === "left" ? foregroundAnsi(bloomColor(theme, bloomAt(-2)), mode) : capAnsi;
 				const leftCap = ICONS.capLeft ? `${leftCapAnsi}${ICONS.capLeft}${RESET}` : "";
 				const rightCap = ICONS.capRight ? `${capAnsi}${ICONS.capRight}${RESET}` : "";
 				return leftCap + body + rightCap;
