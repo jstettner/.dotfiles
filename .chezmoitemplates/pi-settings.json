@@ -28,5 +28,5 @@
   "humanlayer": {
     "defaultMirroring": "off"
   },
-  "fullscreenCopyOnSelect": false
+  "fullscreenCopyOnSelect": true
 }
