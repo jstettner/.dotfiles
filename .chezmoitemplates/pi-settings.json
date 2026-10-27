@@ -18,7 +18,7 @@
     "git:github.com/humanlayer/humanlayer-pi"
   ],
   "hideThinkingBlock": false,
-  "tuiMode": "regular",
+  "tuiMode": "fullscreen",
   "defaultThinkingLevel": "xhigh",
   "workingVibe": "zen",
   "powerline": {
