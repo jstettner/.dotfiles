@@ -14,7 +14,8 @@
     "npm:pi-claude-bridge",
     "npm:pi-web-access",
     "~/src/pi-spin",
-    "git:github.com/jstettner/pi-subagent"
+    "git:github.com/jstettner/pi-subagent",
+    "git:github.com/humanlayer/humanlayer-pi"
   ],
   "hideThinkingBlock": false,
   "tuiMode": "regular",
