@@ -27,5 +27,6 @@
   },
   "humanlayer": {
     "defaultMirroring": "off"
-  }
+  },
+  "fullscreenCopyOnSelect": false
 }
