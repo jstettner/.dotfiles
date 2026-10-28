@@ -12,7 +12,12 @@ and migrates the previously tracked eager or lazy Homebrew NVM block, or the
 local `~/.nvm/nvm.sh` setup with inherited PATH cleanup, in place. The lazy loader
 supports both Homebrew and `~/.nvm` installations.
 Unrecognized NVM initialization fails without changing the file, so it can be
-reviewed manually instead of loading NVM twice. Do not use `chezmoi add ~/.zshrc`:
+reviewed manually instead of loading NVM twice.
+
+It also manages a marked Starship block that runs `starship init zsh` when
+Starship is installed. An existing `eval "$(starship init zsh)"` line is migrated
+into the block in place; other Starship initialization fails without changing the
+file, so the prompt is never initialized twice. Do not use `chezmoi add ~/.zshrc`:
 it would replace the modifier with a full-file snapshot.
 
 ## Zed

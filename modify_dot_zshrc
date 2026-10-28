@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Manage only the lazy NVM block, preserving machine-local shell settings."""
+"""Manage only the lazy NVM and Starship blocks, preserving machine-local shell settings."""
 import re
 import sys
 
@@ -44,23 +44,59 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && . "/opt/homebrew/opt/nvm/nvm.sh"
 [ -s "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm" ] && . "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm"
 '''
+STARSHIP_BEGIN = "# >>> chezmoi starship >>>"
+STARSHIP_END = "# <<< chezmoi starship <<<"
+STARSHIP = '''# Starship prompt; its config is ~/.config/starship.toml.
+if (( $+commands[starship] )); then
+  eval "$(starship init zsh)"
+fi
+'''
+LEGACY_STARSHIP = re.compile(r'(?m)^[ \t]*eval "\$\(starship init zsh\)"[ \t]*\n?')
 
 
-def modify(current):
+def replace_block(current, begin, end, body, label):
+    block = begin + "\n" + body + end + "\n"
+    if begin not in current and end not in current:
+        return None
+    pattern = re.compile(r"(?m)^" + re.escape(begin) + r"\n[\s\S]*?^" + re.escape(end) + r"(?:\n|$)")
+    matches = list(pattern.finditer(current))
+    if len(matches) != 1 or current.count(begin) != 1 or current.count(end) != 1:
+        raise ValueError(f"Malformed {label} markers; leaving .zshrc unchanged")
+    return pattern.sub(lambda _: block, current)
+
+
+def append_block(current, block):
+    separator = "" if not current or current.endswith("\n") else "\n"
+    return current + separator + block
+
+
+def modify_nvm(current):
     block = BEGIN + "\n" + LAZY + END + "\n"
-    if BEGIN in current or END in current:
-        pattern = re.compile(r"(?m)^" + re.escape(BEGIN) + r"\n[\s\S]*?^" + re.escape(END) + r"(?:\n|$)")
-        matches = list(pattern.finditer(current))
-        if len(matches) != 1 or current.count(BEGIN) != 1 or current.count(END) != 1:
-            raise ValueError("Malformed lazy-nvm markers; leaving .zshrc unchanged")
-        return pattern.sub(lambda _: block, current)
+    replaced = replace_block(current, BEGIN, END, LAZY, "lazy-nvm")
+    if replaced is not None:
+        return replaced
     for previous in (LAZY, LEGACY_LAZY, EAGER, LOCAL_EAGER):
         if current.count(previous) == 1:
             return current.replace(previous, block, 1)
     if re.search(r"(?m)^[^#\n]*nvm\.sh", current):
         raise ValueError("Unrecognized NVM initialization; migrate it manually before applying")
-    separator = "" if not current or current.endswith("\n") else "\n"
-    return current + separator + block
+    return append_block(current, block)
+
+
+def modify_starship(current):
+    block = STARSHIP_BEGIN + "\n" + STARSHIP + STARSHIP_END + "\n"
+    replaced = replace_block(current, STARSHIP_BEGIN, STARSHIP_END, STARSHIP, "starship")
+    if replaced is not None:
+        return replaced
+    if len(LEGACY_STARSHIP.findall(current)) == 1:
+        return LEGACY_STARSHIP.sub(lambda _: block, current)
+    if re.search(r"(?m)^[^#\n]*starship init", current):
+        raise ValueError("Unrecognized Starship initialization; migrate it manually before applying")
+    return append_block(current, block)
+
+
+def modify(current):
+    return modify_starship(modify_nvm(current))
 
 
 if __name__ == "__main__":
