@@ -10,7 +10,7 @@ if ! command -v brew >/dev/null 2>&1; then
   if [ -x /opt/homebrew/bin/brew ]; then eval "$(/opt/homebrew/bin/brew shellenv)"; fi
 fi
 formulae=()
-for pair in gh:gh go:go nvim:neovim rg:ripgrep tree-sitter:tree-sitter-cli; do
+for pair in gh:gh go:go nvim:neovim rg:ripgrep starship:starship tree-sitter:tree-sitter-cli; do
   command -v "${pair%%:*}" >/dev/null 2>&1 || formulae+=("${pair#*:}")
 done
 if [ ${#formulae[@]} -gt 0 ]; then brew install "${formulae[@]}"; fi
@@ -60,6 +60,7 @@ if ! version_ge "$(go env GOVERSION 2>/dev/null | sed 's/^go//')" 1.24.2; then
   curl -fsSL "https://go.dev/dl/$go_version.linux-$go_arch.tar.gz" | tar -xz -C ~/.local
   ln -sf ~/.local/go/bin/go ~/.local/go/bin/gofmt ~/.local/bin/
 fi
+command -v starship >/dev/null 2>&1 || curl -fsSL https://starship.rs/install.sh | sh -s -- -y -b ~/.local/bin
 {{- end }}
 
 # Node comes from nvm on every OS; Pi installs into it.
