@@ -1,1 +1,6 @@
 sourceDir = {{ .chezmoi.sourceDir | quote }}
+
+# After `chezmoi re-add`, capture what it skips: modify_ snapshots, new files, plugin lists.
+[hooks.re-add.post]
+command = "bash"
+args = [{{ joinPath .chezmoi.sourceDir "scripts/capture.sh" | quote }}]

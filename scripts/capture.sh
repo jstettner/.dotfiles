@@ -2,6 +2,15 @@
 # Capture only reviewed configuration paths, never whole application directories.
 set -euo pipefail
 
+# chezmoi runs this after `chezmoi re-add`, and runs hooks even on a dry run.
+if [[ ${CHEZMOI_COMMAND-} == re-add ]]; then
+  for arg in ${CHEZMOI_ARGS-}; do
+    if [[ $arg == --dry-run* || $arg =~ ^-[a-zA-Z]*n[a-zA-Z]*$ ]]; then
+      exit 0
+    fi
+  done
+fi
+
 source_dir="$(chezmoi source-path)"
 
 # Re-add every tracked file. Templates are skipped: chezmoi add would replace

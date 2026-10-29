@@ -4,6 +4,16 @@
 sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin init --apply --source ~/src/dotfiles https://github.com/jstettner/.dotfiles.git
 ```
 
+## Capturing changes
+
+`chezmoi re-add` captures configuration changed on this machine. Its `re-add.post`
+hook (in `.chezmoi.toml.tmpl`) runs `scripts/capture.sh`, which also snapshots what
+re-add skips: the `modify_` files' managed values, new files in our own config
+folders, and the Herdr plugin list. The hook does nothing on `--dry-run`. Review the
+Git diff before committing. Running `bash scripts/capture.sh` directly does the same.
+On a machine set up before the hook existed, run `chezmoi init` once to add it to
+the chezmoi config.
+
 ## Zsh
 
 `modify_dot_zshrc` manages only the marked lazy-NVM block, preserving machine-local
@@ -24,8 +34,8 @@ it would replace the modifier with a full-file snapshot.
 
 Chezmoi tracks `~/.config/zed/settings.json` and `~/.config/zed/keymap.json`.
 Prompts, themes, and runtime state are not captured. After changing settings or
-bindings in Zed, run `bash scripts/capture.sh` from this repository and review the
-Git diff before committing. Run `chezmoi apply` to deploy the tracked config.
+bindings in Zed, run `chezmoi re-add` and review the Git diff before committing.
+Run `chezmoi apply` to deploy the tracked config.
 
 ## Hex
 
@@ -37,9 +47,9 @@ machine-local settings are preserved. History, the local API's credentials and t
 downloaded models are never tracked. On a new machine, launch Hex once so it writes
 its settings, then run `chezmoi apply`.
 
-After editing replacements in Hex, run `bash scripts/capture.sh` and review the Git
-diff. Quit Hex before `chezmoi apply`, or it may overwrite the applied settings
-with the ones it holds in memory.
+After editing replacements in Hex, run `chezmoi re-add` and review the Git diff.
+Quit Hex before `chezmoi apply`, or it may overwrite the applied settings with the
+ones it holds in memory.
 
 ## Pi desktop automation (macOS)
 
