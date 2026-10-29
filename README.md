@@ -27,6 +27,20 @@ Prompts, themes, and runtime state are not captured. After changing settings or
 bindings in Zed, run `bash scripts/capture.sh` from this repository and review the
 Git diff before committing. Run `chezmoi apply` to deploy the tracked config.
 
+## Hex
+
+Hex keeps its settings in `~/Library/Application Support/voice-control/settings.json`.
+`modify_settings.json` manages only its `dictation_processing` key: the word
+replacements, modes, transformations and post-processing prompt, snapshotted in
+`.chezmoitemplates/hex-dictation-processing.json`. The microphone, hotkeys and other
+machine-local settings are preserved. History, the local API's credentials and the
+downloaded models are never tracked. On a new machine, launch Hex once so it writes
+its settings, then run `chezmoi apply`.
+
+After editing replacements in Hex, run `bash scripts/capture.sh` and review the Git
+diff. Quit Hex before `chezmoi apply`, or it may overwrite the applied settings
+with the ones it holds in memory.
+
 ## Pi desktop automation (macOS)
 
 `chezmoi apply` installs [Cua Driver](https://cua.ai/docs/cua-driver/quickstart)

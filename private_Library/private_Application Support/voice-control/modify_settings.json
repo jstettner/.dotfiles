@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+"""Manage only Hex's dictation processing (replacements, modes), preserving machine-local settings."""
+import json
+import os
+from pathlib import Path
+import sys
+
+# scripts/capture.sh snapshots the live value here.
+SNAPSHOT = Path(".chezmoitemplates") / "hex-dictation-processing.json"
+
+
+def modify(current, dictation_processing):
+    # Hex has not written its settings yet; let it create them on first launch.
+    if not current.strip():
+        return current
+    settings = json.loads(current)
+    settings["dictation_processing"] = dictation_processing
+    # Match how Hex writes the file, so an unchanged file stays byte-identical.
+    return json.dumps(settings, indent=2, ensure_ascii=False)
+
+
+if __name__ == "__main__":
+    snapshot = Path(os.environ["CHEZMOI_SOURCE_DIR"]) / SNAPSHOT
+    sys.stdout.write(modify(sys.stdin.read(), json.loads(snapshot.read_text())))

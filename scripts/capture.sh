@@ -27,6 +27,15 @@ chezmoi add --dry-run --secrets error "$HOME/.pi/agent/settings.json"
 python3 "$source_dir/scripts/capture-pi-settings.py" \
   "$HOME/.pi/agent/settings.json" "$source_dir/.chezmoitemplates/pi-settings.json"
 
+# Hex's settings.json deploys through modify_settings.json, which manages only its
+# dictation processing (replacements, modes); snapshot just that.
+hex_settings="$HOME/Library/Application Support/voice-control/settings.json"
+if [[ -f "$hex_settings" ]]; then
+  chezmoi add --dry-run --secrets error "$hex_settings"
+  python3 "$source_dir/scripts/capture-hex-settings.py" \
+    "$hex_settings" "$source_dir/.chezmoitemplates/hex-dictation-processing.json"
+fi
+
 if [[ -f "$HOME/.pi/agent/keybindings.json" ]]; then
   chezmoi add --secrets error "$HOME/.pi/agent/keybindings.json"
 fi

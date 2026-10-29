@@ -1,0 +1,58 @@
+{
+  "default_mode": {
+    "name": "Global",
+    "applications": [],
+    "browser_hosts": [],
+    "replacements": [
+      {
+        "matched_phrase": "tilde",
+        "output": "~"
+      },
+      {
+        "matched_phrase": "source",
+        "output": "src"
+      },
+      {
+        "matched_phrase": "ambrose",
+        "output": "ambral"
+      },
+      {
+        "matched_phrase": "knit",
+        "output": "nit"
+      },
+      {
+        "matched_phrase": "ambril",
+        "output": "ambral"
+      },
+      {
+        "matched_phrase": "emberl",
+        "output": "ambral"
+      },
+      {
+        "matched_phrase": "embril",
+        "output": "ambral"
+      },
+      {
+        "matched_phrase": "embrill",
+        "output": "ambral"
+      },
+      {
+        "matched_phrase": "orcs",
+        "output": "orgs"
+      },
+      {
+        "matched_phrase": "orc",
+        "output": "org"
+      }
+    ],
+    "transformations": [],
+    "post_processing": {
+      "enabled": false,
+      "prompt": "Rewrite the transcript into clear, natural text while preserving the speaker's intended meaning.",
+      "model": null,
+      "variant": null,
+      "deadline_seconds": 30
+    }
+  },
+  "modes": []
+}
