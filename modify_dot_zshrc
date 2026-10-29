@@ -18,8 +18,31 @@ if [[ -s /opt/homebrew/opt/nvm/nvm.sh ]]; then
   }
 fi
 '''
+PREVIOUS_LAZY = '''# Load NVM on the first Node command instead of delaying every new shell.
+export NVM_DIR="$HOME/.nvm"
+if [[ -s /opt/homebrew/opt/nvm/nvm.sh || -s "$NVM_DIR/nvm.sh" ]]; then
+  function nvm node npm npx corepack {
+    local nvm_command=${funcstack[1]}
+    unfunction nvm node npm npx corepack
+    if [[ -s /opt/homebrew/opt/nvm/nvm.sh ]]; then
+      source /opt/homebrew/opt/nvm/nvm.sh || return $?
+      [[ ! -s /opt/homebrew/opt/nvm/etc/bash_completion.d/nvm ]] ||
+        source /opt/homebrew/opt/nvm/etc/bash_completion.d/nvm
+    else
+      source "$NVM_DIR/nvm.sh" || return $?
+    fi
+    "$nvm_command" "$@"
+  }
+fi
+'''
 LAZY = '''# Load NVM on the first Node command instead of delaying every new shell.
 export NVM_DIR="$HOME/.nvm"
+# Until then, put the default version's global CLIs (cf, wrangler, ...) on PATH, after everything else.
+() {
+  local default=${$(<"$NVM_DIR/alias/default" 2>/dev/null)#v}
+  local bins=("$NVM_DIR"/versions/node/v${default}*/bin(N/nOn))
+  [[ -z $default ]] || (( ! $#bins )) || path+=("${bins[1]}")
+}
 if [[ -s /opt/homebrew/opt/nvm/nvm.sh || -s "$NVM_DIR/nvm.sh" ]]; then
   function nvm node npm npx corepack {
     local nvm_command=${funcstack[1]}
@@ -75,7 +98,7 @@ def modify_nvm(current):
     replaced = replace_block(current, BEGIN, END, LAZY, "lazy-nvm")
     if replaced is not None:
         return replaced
-    for previous in (LAZY, LEGACY_LAZY, EAGER, LOCAL_EAGER):
+    for previous in (LAZY, PREVIOUS_LAZY, LEGACY_LAZY, EAGER, LOCAL_EAGER):
         if current.count(previous) == 1:
             return current.replace(previous, block, 1)
     if re.search(r"(?m)^[^#\n]*nvm\.sh", current):
