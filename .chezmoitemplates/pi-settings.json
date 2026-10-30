@@ -1,6 +1,6 @@
 {
   "lastChangelogVersion": "0.87.1",
-  "theme": "light/dark",
+  "theme": "system",
   "defaultTools": [
     "+codemode"
   ],
