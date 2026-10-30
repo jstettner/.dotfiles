@@ -28,5 +28,6 @@
   "humanlayer": {
     "defaultMirroring": "off"
   },
-  "fullscreenCopyOnSelect": true
+  "fullscreenCopyOnSelect": true,
+  "showHardwareCursor": true
 }
