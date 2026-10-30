@@ -1,2 +1,12 @@
+# One-line prompt, so a terminal's cursor shader doesn't trail down through a multi-line redraw.
+add_newline = false
+
+[line_break]
+disabled = true
+
+[git_branch]
+truncation_length = 32
+truncation_symbol = "…"
+
 [git_status]
 disabled = false
