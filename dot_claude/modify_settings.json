@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # chezmoi passes the current ~/.claude/settings.json on stdin and writes back stdout.
-# Only the herdr-activity hooks are managed here; Claude and Herdr's own changes
-# (model, effort, plugins, Herdr's SessionStart hook) are kept as they are on disk.
+# Only the herdr-activity hooks and the Rex SessionStart hook are managed here; Claude
+# and Herdr's own changes (model, effort, plugins, Herdr's SessionStart hook) are kept
+# as they are on disk.
 import json
 import sys
 
@@ -34,5 +35,19 @@ for event, (arg, matcher) in HOOKS.items():
     if matcher:
         entry = {"matcher": matcher, **entry}
     hooks[event] = entries + [entry]
+
+# Rex's SessionStart hook runs our wrapper, which names the Rex session after the git
+# branch. Drop Rex's own entry (`rex skill setup` writes it) and any previous wrapper.
+REX = '/bin/sh "$HOME/.claude/hooks/rex-session-start.sh"'
+entries = [
+    entry
+    for entry in hooks.get("SessionStart", [])
+    if not any(
+        "rex __internal session-start" in hook.get("command", "")
+        or "rex-session-start.sh" in hook.get("command", "")
+        for hook in entry.get("hooks", [])
+    )
+]
+hooks["SessionStart"] = entries + [{"hooks": [{"type": "command", "command": REX, "timeout": 5}]}]
 
 sys.stdout.write(json.dumps(settings, indent=2, ensure_ascii=False) + "\n")
