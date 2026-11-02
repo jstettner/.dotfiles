@@ -37,6 +37,15 @@ Prompts, themes, and runtime state are not captured. After changing settings or
 bindings in Zed, run `chezmoi re-add` and review the Git diff before committing.
 Run `chezmoi apply` to deploy the tracked config.
 
+## Rex
+
+`Cmd+O` opens plannotator-tui; `Cmd+Shift+O` reviews the agent's last message.
+Reviews open in a centered floating pane (80% of the tab), without changing the
+tiled layout. This requires Rex's `session.new_layer` API. Explicit
+`--placement split` still opens beside the agent.
+
+Apply changes with `chezmoi apply ~/.config/rex/annotate/herdr-shim`.
+
 ## Hex
 
 Hex keeps its settings in `~/Library/Application Support/voice-control/settings.json`.

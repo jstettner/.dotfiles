@@ -68,14 +68,35 @@ def plugin_pane_open(args):
     direction = {"right": "right", "left": "left", "down": "below", "up": "above"}.get(
         flag(args, "--direction", "right"), "right"
     )
+    command = ["/usr/bin/env", *envs, tui(), "herdr", "pane"]
+    cwd = flag(args, "--cwd")
+    if placement in ("overlay", "popup"):
+        # Resolve the anchor rather than using the active tab or inherited session.
+        target = json.loads(rex("block", "inspect", anchor, "--json"))
+        window = target["block"].get("window_id")
+        if not window:
+            fail("target pane is not in a window")
+        options = {"shell": "none", "command": command}
+        if cwd:
+            options["cwd"] = cwd
+        rex("api", "call", "session.new_layer", "-", input=json.dumps({
+            "session_id": target["session_id"],
+            "window_id": window,
+            "bounds": [0.1, 0.1, 0.8, 0.8],
+            "layout": {"block": {
+                "flavor": "com.superlogical.terminal.shell",
+                "label": "annotate",
+                "options": options,
+            }},
+            "focus": True,
+        }))
+        return
+
     cmd = ["split", "-b", anchor, "--split", direction, "--focus", "--json", "--label", "annotate"]
-    if flag(args, "--cwd"):
-        cmd += ["-c", flag(args, "--cwd")]
-    cmd += ["--shell", "none", "--", "/usr/bin/env", *envs, tui(), "herdr", "pane"]
-    created = json.loads(rex(*cmd))
-    # Rex has no overlay or popup layer for this, so cover the window by zooming the split.
-    if placement in ("overlay", "popup") and created.get("block_ids"):
-        rex("zoom", "-b", created["block_ids"][0], "--on", check=False)
+    if cwd:
+        cmd += ["-c", cwd]
+    cmd += ["--shell", "none", "--", *command]
+    rex(*cmd)
 
 
 def pane_process_info(args):
