@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Manage only the lazy NVM and Starship blocks, preserving machine-local shell settings."""
+"""Manage NVM, Starship, and neorex blocks, preserving machine-local shell settings."""
 import re
 import sys
 
@@ -118,8 +118,34 @@ def modify_starship(current):
     return append_block(current, block)
 
 
+NEOREX_BEGIN = "# >>> chezmoi neorex >>>"
+NEOREX_END = "# <<< chezmoi neorex <<<"
+NEOREX = '''# Use the Rex-native frontend interactively, without replacing nvim on PATH.
+# Build ~/src/neorex with `zig build`, or install neorex on PATH.
+function nvim {
+  local frontend="${commands[neorex]:-$HOME/src/neorex/zig-out/bin/neorex}"
+  if [[ -n "$REX_SERVER" && -n "$REX_SESSION" && -x "$frontend" ]]; then
+    case "$1" in
+      --version|-v|--headless|--embed|--api-info|-h|--help)
+        command nvim "$@" ;;
+      *) command "$frontend" "$@" ;;
+    esac
+  else
+    command nvim "$@"
+  fi
+}
+'''
+
+
+def modify_neorex(current):
+    replaced = replace_block(current, NEOREX_BEGIN, NEOREX_END, NEOREX, "neorex")
+    if replaced is not None:
+        return replaced
+    return append_block(current, NEOREX_BEGIN + "\n" + NEOREX + NEOREX_END + "\n")
+
+
 def modify(current):
-    return modify_starship(modify_nvm(current))
+    return modify_neorex(modify_starship(modify_nvm(current)))
 
 
 if __name__ == "__main__":
