@@ -44,7 +44,11 @@ Reviews open in a centered floating pane (80% of the tab), without changing the
 tiled layout. This requires Rex's `session.new_layer` API. Explicit
 `--placement split` still opens beside the agent.
 
-Apply changes with `chezmoi apply ~/.config/rex/annotate/herdr-shim`.
+For remote panes, the action is forwarded to the owning Rex server so transcript
+lookup and review both run there, not on the local Mac. Install this Rex config and
+plannotator-tui on each server used for reviews.
+
+Apply changes with `chezmoi apply ~/.config/rex`, then `rex config reload`.
 
 ## Hex
 

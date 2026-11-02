@@ -28,11 +28,19 @@ if [ ! -x "$PLANNOTATOR_TUI_BIN" ]; then
 fi
 
 # Open the folder the agent is working in.
-cwd="$("$rex" block call -b "$block" process | /usr/bin/python3 -I -c '
+if ! info="$("$rex" block call -b "$block" process 2>&1)"; then
+  printf 'rex-annotate: %s\n' "$info" >&2
+  exit 1
+fi
+cwd="$(printf '%s' "$info" | /usr/bin/python3 -I -c '
 import json, sys
-info = json.load(sys.stdin)
+try:
+    info = json.load(sys.stdin)
+except ValueError:
+    print("rex-annotate: invalid process info from Rex", file=sys.stderr)
+    sys.exit(1)
 print((info.get("foreground") or {}).get("cwd") or (info.get("ancestors") or [{}])[0].get("cwd") or "")
-' || true)"
+')"
 cd "${cwd:-$HOME}"
 
 export HERDR_ENV=1 HERDR_BIN_PATH="$here/herdr-shim" HERDR_PANE_ID="$block" HERDR_PLUGIN_ID=annotate
