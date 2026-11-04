@@ -14,7 +14,8 @@
     "npm:pi-claude-bridge",
     "npm:pi-web-access",
     "~/src/pi-spin",
-    "git:github.com/jstettner/pi-subagent"
+    "git:github.com/jstettner/pi-subagent",
+    "npm:@specode/pi-subscription-usage@1.5.0"
   ],
   "hideThinkingBlock": false,
   "tuiMode": "fullscreen",
@@ -25,5 +26,8 @@
     "placement": "above"
   },
   "fullscreenCopyOnSelect": true,
-  "showHardwareCursor": true
+  "showHardwareCursor": true,
+  "extensionChangelogVersions": {
+    "{\"source\":\"npm:pi-web-access\",\"scope\":\"user\"}": "0.46.0"
+  }
 }
