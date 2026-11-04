@@ -72,8 +72,8 @@ class LazyNvmTests(unittest.TestCase):
 class StarshipTests(unittest.TestCase):
     def test_appends_block_once(self):
         result = modify("alias local_only='echo hello'\n")
-        self.assertEqual(result.count(MODULE["STARSHIP"]), 1)
-        self.assertTrue(result.endswith(MODULE["STARSHIP_END"] + "\n"))
+        block = MODULE["STARSHIP_BEGIN"] + "\n" + MODULE["STARSHIP"] + MODULE["STARSHIP_END"] + "\n"
+        self.assertEqual(result.count(block), 1)
         self.assertEqual(modify(result), result)
 
     def test_migrates_existing_init_line_in_place(self):
