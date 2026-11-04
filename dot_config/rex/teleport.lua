@@ -145,12 +145,13 @@ local function call(s, method, args)
   return res
 end
 
--- What each terminal is running and where, from its foreground process.
+-- What each tiled terminal is running and where, from its foreground process. Floating panes, such as the pop-down,
+-- aren't moved.
 local function inspect_panes(src, session_id, view)
   local panes = {}
   for _, window in ipairs(view.windows) do
     for _, layer in ipairs(window.layers) do
-      for _, block in ipairs(layer.blocks) do
+      for _, block in ipairs(layer.kind == "tiled" and layer.blocks or {}) do
         local pane = { block = block }
         if block.creator_name == "com.superlogical.terminal" then
           local proc = call(src, "block.method", { session_id = session_id, block_id = block.block_id, method = "process" })
@@ -248,7 +249,7 @@ local function pick_setup_pane(view, panes, focused)
     end
     for _, layer in ipairs(window.layers) do
       for _, block in ipairs(layer.blocks) do
-        if panes[block.block_id].shell then
+        if panes[block.block_id] and panes[block.block_id].shell then
           anywhere = anywhere or block.block_id
           if here then
             beside = beside or block.block_id
@@ -260,15 +261,69 @@ local function pick_setup_pane(view, panes, focused)
   return beside or anywhere or focused
 end
 
-local function only_host()
-  local labels = {}
+-- Where a session on from (a host's label, or nil for this Mac) can go, as { to, name } in the order to offer them.
+local function destinations(from)
+  if from then
+    return { { to = "local", name = "this Mac" } }
+  end
+  local list = {}
   for label in pairs(config.hosts) do
-    table.insert(labels, label)
+    table.insert(list, { to = label, name = label })
   end
-  if #labels ~= 1 then
-    error("say which host to teleport to: to=" .. table.concat(labels, "|"), 0)
+  table.sort(list, function(a, b)
+    return a.name < b.name
+  end)
+  return list
+end
+
+-- The pop-down: pick.sh in a floating pane over the focused one, which runs the teleport once a destination is
+-- chosen. On a host it runs there, so it reaches this Mac's Rex at its Tailscale address.
+local function open_picker(from, session_id, block_id)
+  local src = side(from)
+  local view = call(src, "session.view", { session_id = session_id })
+  local window_id
+  for _, window in ipairs(view.windows) do
+    for _, layer in ipairs(window.layers) do
+      for _, block in ipairs(layer.blocks) do
+        if block.block_id == block_id then
+          window_id = window.window_id
+        end
+      end
+    end
   end
-  return labels[1]
+  local hub = ""
+  if from then
+    local status = call(side(nil), "server.status", {})
+    hub = status.tailscale and status.tailscale.https and status.tailscale.https.url
+      or error("a host can't reach this Mac's Rex: its Tailscale HTTPS address is off", 0)
+  end
+  local command = {
+    "/bin/sh",
+    "-c",
+    'exec /bin/bash "$HOME/.config/rex/teleport/pick.sh" "$@"',
+    "pick",
+    session_id,
+    block_id,
+    from or "",
+    hub,
+    view.label or "this session",
+  }
+  for _, d in ipairs(destinations(from)) do
+    table.insert(command, d.to .. "=" .. d.name)
+  end
+  call(src, "session.new_layer", {
+    session_id = session_id,
+    window_id = window_id,
+    bounds = { 0.3, 0.25, 0.4, 0.3 },
+    layout = {
+      block = {
+        flavor = "com.superlogical.terminal.shell",
+        label = "teleport",
+        options = { shell = "none", command = command },
+      },
+    },
+    focus = true,
+  })
 end
 
 local function teleport(ctx, args)
@@ -276,7 +331,25 @@ local function teleport(ctx, args)
   if from == "local" then
     from = nil
   end
-  local to = args.to or (from and "local" or only_host())
+  local to = args.to
+  if not to then
+    local choices = destinations(from)
+    if ctx.origin == "key" or ctx.origin == "palette" then
+      local session_id, block_id = args.session or ctx.session_id, args.block or ctx.block_id
+      if not session_id or not block_id then
+        error("teleport needs a focused pane", 0)
+      end
+      return open_picker(from, session_id, block_id)
+    end
+    if #choices ~= 1 then
+      local names = {}
+      for i, d in ipairs(choices) do
+        names[i] = d.to
+      end
+      error("say where to teleport: to=" .. table.concat(names, "|"), 0)
+    end
+    to = choices[1].to
+  end
   if to == "local" then
     to = nil
   end
@@ -474,6 +547,15 @@ function M.setup(opts)
       follow = "boolean?",
     },
     run = teleport,
+  })
+  rex.action({
+    name = "teleport_destinations",
+    title = "Teleport: where a session can go",
+    category = "Session",
+    args = { from = "string?" },
+    run = function(_, args)
+      return destinations(args.from ~= "local" and args.from or nil)
+    end,
   })
   rex.action({
     name = "teleport_helper",
