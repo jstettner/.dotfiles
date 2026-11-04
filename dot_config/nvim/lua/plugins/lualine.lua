@@ -1,3 +1,5 @@
+local matching_theme = require("config.neorex").enabled
+
 return {
   {
     "nvim-lualine/lualine.nvim",
@@ -41,7 +43,9 @@ return {
     end,
     opts = {
       options = {
-        theme = "auto",
+        theme = matching_theme and "neorex" or "auto",
+        -- The neorex theme has a transparent middle section.
+        section_separators = matching_theme and { left = "", right = "" } or nil,
         -- neorex external windows need a statusline per pane.
         globalstatus = vim.v.servername:match("/neorex%-%d+%.nvim%.sock$") == nil,
       },

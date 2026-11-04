@@ -31,7 +31,7 @@ return {
     },
     config = function(_, opts)
       require("kanagawa").setup(opts)
-      vim.cmd.colorscheme("kanagawa-dragon")
+      vim.cmd.colorscheme(require("config.neorex").enabled and "neorex" or "kanagawa-dragon")
     end,
   },
 }
