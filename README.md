@@ -52,7 +52,8 @@ Apply changes with `chezmoi apply ~/.config/rex`, then `rex config reload`.
 
 ## Hex
 
-Hex keeps its settings in `~/Library/Application Support/voice-control/settings.json`.
+Hex keeps its settings in `~/Library/Application Support/hex/settings.json`
+(older versions used `voice-control` instead of `hex`).
 `modify_settings.json` manages only its `dictation_processing` key: the word
 replacements, modes, transformations and post-processing prompt, snapshotted in
 `.chezmoitemplates/hex-dictation-processing.json`. The microphone, hotkeys and other

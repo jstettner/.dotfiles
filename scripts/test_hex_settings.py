@@ -7,7 +7,7 @@ import unittest
 
 SOURCE = Path(__file__).resolve().parents[1]
 modify = runpy.run_path(
-    str(SOURCE / "private_Library" / "private_Application Support" / "voice-control" / "modify_settings.json")
+    str(SOURCE / "private_Library" / "private_Application Support" / "hex" / "modify_settings.json")
 )["modify"]
 spec = importlib.util.spec_from_file_location(
     "capture_hex_settings", Path(__file__).with_name("capture-hex-settings.py")
