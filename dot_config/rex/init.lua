@@ -38,3 +38,13 @@ rex.action({ name = "annotate_terminal", title = "Annotate: terminal output", ru
 
 rex.bind("cmd+o", "annotate_open")
 rex.bind("cmd+shift+o", "annotate_last")
+
+-- Hand a session, its worktree and its pi sessions to ambral-server and back. See teleport.lua.
+require("teleport").setup({
+  hosts = { ["ambral-server"] = { ssh = "ambral-server" } },
+  -- Leave the Mac's session open after teleporting it away.
+  keep_local = true,
+  repos = {
+    ["src/ambral/cerberus"] = { carry = { ".env", ".local" }, setup = "bun install" },
+  },
+})
