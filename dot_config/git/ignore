@@ -1,0 +1,5 @@
+**/.claude/settings.local.json
+
+# Task notes the init-task skill keeps beside a repo's code. The skill also adds this to the clone's own exclude
+# file, which a new clone, such as one on another machine, doesn't have.
+/.local/tasks/
