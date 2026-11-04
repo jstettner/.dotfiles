@@ -24,7 +24,8 @@ local shells = { zsh = true, bash = true, fish = true, sh = true, dash = true, n
 local ssh_opts = "ssh -o BatchMode=yes"
 
 -- hosts: label -> { ssh = destination }, defaulting the destination to the label.
--- repos: main checkout's path under ~ -> { carry = { gitignored paths }, setup = command for the focused pane }.
+-- repos: main checkout's path under ~ -> { carry = { gitignored paths }, setup = command run in the new worktree's
+-- root, in a shell pane (see pick_setup_pane) }.
 -- keep_local: leave this Mac's session open after teleporting it to a host.
 local config = { hosts = {}, repos = {}, keep_local = false }
 
