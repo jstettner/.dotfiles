@@ -37,6 +37,20 @@ Prompts, themes, and runtime state are not captured. After changing settings or
 bindings in Zed, run `chezmoi re-add` and review the Git diff before committing.
 Run `chezmoi apply` to deploy the tracked config.
 
+## Neovim
+
+Mermaid code blocks in Markdown render inline as text diagrams with
+[mermaid-nvim](https://github.com/searleser97/mermaid-nvim), including inside Rex.
+Chezmoi installs `termaid` with `uv` on macOS and Linux and restores the pinned
+Neovim plugins. Existing renderer installations are left alone.
+
+- `<Space>mp` (or Enter inside a block): open a floating preview; `q` closes it.
+- `<Space>mt`: toggle the diagram under the cursor.
+- `<Space>mr`: re-render all diagrams in the buffer.
+
+Restart Neovim after applying the config. Text rendering supports a subset of
+Mermaid syntax, not the full browser renderer.
+
 ## Rex
 
 `Cmd+O` opens plannotator-tui; `Cmd+Shift+O` reviews the agent's last message.

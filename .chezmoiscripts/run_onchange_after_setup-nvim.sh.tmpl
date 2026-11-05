@@ -6,12 +6,15 @@
 set -euo pipefail
 
 # cc and tree-sitter build parsers; node and npm let Mason install ts_ls.
-for tool in nvim git node npm cc tree-sitter; do
+for tool in nvim git node npm cc tree-sitter uv; do
   if ! command -v "$tool" >/dev/null 2>&1; then
     printf 'Missing prerequisite: %s\n' "$tool" >&2
     exit 1
   fi
 done
+
+# Keep the Mermaid renderer isolated from the system Python. Leave existing installs alone.
+command -v termaid >/dev/null 2>&1 || uv tool install 'termaid==0.10.0'
 
 # First-run install records the bootstrap's lazy.nvim (stable branch) in the
 # lockfile, so put the committed lockfile back before restoring from it.
