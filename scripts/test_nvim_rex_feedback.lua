@@ -347,6 +347,14 @@ local tests = {
     eq(#state.calls, 0)
     vim.cmd("q!")
   end },
+  { "historical diff buffers are not mislabeled as current files", function()
+    vim.api.nvim_buf_set_name(source, "diffview:///repo/:0:/plan.md")
+    eq(vim.bo.buftype, "")
+    feedback.annotate()
+    eq(vim.api.nvim_get_current_buf(), source)
+    eq(#state.calls, 0)
+    has(state.messages[1].message, "ordinary file buffer")
+  end },
   { "outside Rex fails without opening a composer", function()
     vim.env.REX_SESSION = nil
     feedback.annotate()

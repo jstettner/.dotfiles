@@ -9,11 +9,17 @@ return {
       "DiffviewFocusFiles",
       "DiffviewRefresh",
     },
-    opts = {},
+    init = function() require("config.rex_diffview").setup() end,
+    opts = {
+      view = {
+        default = { winbar_info = true },
+        file_history = { winbar_info = true },
+      },
+    },
     keys = {
-      { "<leader>dv", "<cmd>DiffviewOpen<CR>", desc = "Open diff view" },
-      { "<leader>dh", "<cmd>DiffviewFileHistory %<CR>", desc = "File history" },
-      { "<leader>dc", "<cmd>DiffviewClose<CR>", desc = "Close diff view" },
+      { "<leader>dv", function() require("config.rex_diffview").open() end, desc = "Open diff view" },
+      { "<leader>dh", function() require("config.rex_diffview").history() end, desc = "File history" },
+      { "<leader>dc", function() require("config.rex_diffview").close() end, desc = "Close diff view" },
     },
   },
 }

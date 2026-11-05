@@ -13,7 +13,8 @@ end
 
 local function capture(range)
   local buf = vim.api.nvim_get_current_buf()
-  if vim.bo[buf].buftype ~= "" then
+  local path = vim.api.nvim_buf_get_name(buf)
+  if vim.bo[buf].buftype ~= "" or path:match("^%a[%w+.-]*://") then
     return nil, "Annotate an ordinary file buffer, not a terminal, preview, or diff revision"
   end
   local first = range and range[1] or vim.api.nvim_win_get_cursor(0)[1]
@@ -28,7 +29,6 @@ local function capture(range)
   else
     lines = vim.api.nvim_buf_get_lines(buf, first - 1, last, false)
   end
-  local path = vim.api.nvim_buf_get_name(buf)
   return {
     path = path ~= "" and path or "[unnamed buffer]",
     cwd = vim.fn.getcwd(),

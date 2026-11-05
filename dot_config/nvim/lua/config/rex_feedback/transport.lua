@@ -1,33 +1,6 @@
+local client = require("config.rex")
+local rex, request = client.run, client.request
 local M = {}
-
-local function rex(args, callback, stdin)
-  local executable = vim.env.REX_BIN_DIR and (vim.env.REX_BIN_DIR .. "/rex") or "rex"
-  local command = { executable, "--autostart=false", "--timeout", "5s" }
-  vim.list_extend(command, args)
-  local ok, err = pcall(vim.system, command, { text = true, stdin = stdin, timeout = 7000 }, function(result)
-    vim.schedule(function()
-      if result.code ~= 0 then
-        callback(vim.trim(result.stderr or "") ~= "" and vim.trim(result.stderr) or "Rex request failed")
-      else
-        callback(nil, result.stdout)
-      end
-    end)
-  end)
-  if not ok then
-    vim.schedule(function() callback(tostring(err)) end)
-  end
-end
-
-local function request(args, callback)
-  rex(args, function(err, output)
-    if err then return callback(err) end
-    local ok, data = pcall(vim.json.decode, output, { luanil = { object = true } })
-    if not ok or type(data) ~= "table" then
-      return callback("Rex returned invalid JSON")
-    end
-    callback(nil, data)
-  end)
-end
 
 local function pi_process(info)
   local process = info.foreground
@@ -40,17 +13,8 @@ local function pi_process(info)
 end
 
 local function blocks(callback)
-  if not vim.env.REX_SESSION or not vim.env.REX_BLOCK then
-    return callback("This editor is not running in a Rex pane")
-  end
-  request({ "block", "ls", "-s", vim.env.REX_SESSION, "--json" }, function(err, data)
-    if err then return callback(err) end
-    for _, block in ipairs(data.blocks or {}) do
-      if block.block_id == vim.env.REX_BLOCK and block.window_id then
-        return callback(nil, data.blocks, block.window_id)
-      end
-    end
-    callback("The editor's Rex pane is no longer in this session")
+  client.context(function(err, context, panes)
+    callback(err, panes, context and context.window)
   end)
 end
 

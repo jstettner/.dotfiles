@@ -69,13 +69,26 @@ It does not start agents, change focus to them or retry delivery automatically.
 
 ### Diffview
 
-[Diffview](https://github.com/sindrets/diffview.nvim) uses its defaults:
+[Diffview](https://github.com/sindrets/diffview.nvim) uses its standard layout,
+with revision headers identifying the index, working tree or commit:
 
 - `<Space>dv`: open working-tree diffs (`:DiffviewOpen`).
 - `<Space>dh`: history of the current file.
 - `<Space>dc`: close the diff view.
 
-Use `:DiffviewOpen origin/main...HEAD` for branch changes. Markdown diffs work
+NeoRex cannot host Diffview\'s Neovim tab/split layout correctly. Its diff and
+history shortcuts therefore open **regular Neovim inside one Rex floating pane**
+in the editor\'s Rex tab, leaving the tiled panes alone. Closing the last Diffview
+with `<Space>dc` or `:DiffviewClose` also exits that review process and its floating
+pane. Unsaved edits made during review prevent automatic exit.
+
+Save or discard changed NeoRex buffers first: the separate reviewer reads files
+from disk, not NeoRex\'s unsaved buffers. Launch failures do not fall back to the
+broken split layout. Ordinary Neovim still opens Diffview in-process.
+
+Use `:RexDiffview origin/main...HEAD` for branch changes in either frontend;
+`:RexFileHistory [paths...]` uses the same routing for history. Direct
+`:DiffviewOpen` remains native, so do not use it inside NeoRex. Markdown diffs work
 like any other file. Diffview and annotations are separate: the annotation bridge
 does not treat a historical diff buffer as a current file. Open the real file to
 comment on it.
@@ -106,6 +119,7 @@ Additional Neovim checks (feedback delivery is mocked; no real agent is sent inp
 ```sh
 nvim --headless -i NONE '+luafile scripts/test_nvim_rex_feedback.lua' '+qa!'
 nvim --headless -i NONE '+luafile scripts/test_nvim_diffview.lua' '+qa!'
+nvim --headless -i NONE '+luafile scripts/test_nvim_diffview_overlay.lua' '+qa!'
 ```
 
 ## Rex

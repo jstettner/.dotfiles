@@ -9,17 +9,18 @@ local ok, err = xpcall(function()
     assert(result.code == 0, result.stderr)
   end
   git({ "init", "-q" })
-  vim.fn.writefile({ "# Before", "", "Old text" }, directory .. "/plan.md")
-  git({ "add", "plan.md" })
+  local path = directory .. "/plan with spaces.md"
+  vim.fn.writefile({ "# Before", "", "Old text" }, path)
+  git({ "add", "plan with spaces.md" })
   git({ "-c", "user.name=Test", "-c", "user.email=test@example.invalid", "commit", "-qm", "initial" })
-  vim.fn.writefile({ "# After", "", "New text" }, directory .. "/plan.md")
+  vim.fn.writefile({ "# After", "", "New text" }, path)
   vim.cmd.cd(vim.fn.fnameescape(directory))
-  vim.cmd.edit(vim.fn.fnameescape(directory .. "/plan.md"))
+  vim.cmd.edit(vim.fn.fnameescape(path))
   local source = vim.api.nvim_get_current_buf()
   local tab = vim.api.nvim_get_current_tabpage()
   local before = vim.api.nvim_buf_get_lines(source, 0, -1, false)
 
-  vim.cmd.DiffviewOpen()
+  vim.api.nvim_feedkeys(vim.keycode("<Space>dv"), "xt", false)
   local lib = require("diffview.lib")
   assert(vim.wait(5000, function()
     local view = lib.get_current_view()
@@ -32,11 +33,17 @@ local ok, err = xpcall(function()
     end
     return false
   end, 20), "no diff window appeared")
+  assert(vim.wait(5000, function()
+    local headers = {}
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do headers[#headers + 1] = vim.wo[win].winbar end
+    local text = table.concat(headers, "\n")
+    return text:find("INDEX", 1, true) and text:find("WORKING TREE", 1, true)
+  end, 20), "before/after revision headers are missing")
   vim.cmd.DiffviewClose()
   assert(vim.api.nvim_get_current_tabpage() == tab, "closing diff did not restore the original tab")
   assert(vim.deep_equal(vim.api.nvim_buf_get_lines(source, 0, -1, false), before), "diff altered the source")
 
-  vim.cmd("DiffviewFileHistory %")
+  vim.api.nvim_feedkeys(vim.keycode("<Space>dh"), "xt", false)
   assert(vim.wait(5000, function()
     local view = lib.get_current_view()
     return view and view.ready and view.panel and view.panel.entries
