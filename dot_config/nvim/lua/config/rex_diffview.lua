@@ -45,15 +45,11 @@ function M.start(options)
   native(options.kind, options.args)
 end
 
-function M.open(kind, args, callback)
+function M.open_overlay(kind, args, callback)
   kind, args = kind or "diff", args or {}
   local function finish(err, result)
     if err then vim.notify(err, vim.log.levels.ERROR, { title = "Diffview" }) end
     if callback then callback(err, result) end
-  end
-  if not require("config.neorex").active then
-    native(kind, args)
-    return finish(nil, { native = true })
   end
   if opening then return finish("A Diffview overlay is already opening") end
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
@@ -66,7 +62,9 @@ function M.open(kind, args, callback)
   local cwd = vim.fn.getcwd()
   local options = vim.json.encode({ kind = kind, args = args })
   local startup = string.format("lua require('config.rex_diffview').start(vim.json.decode(%q))", options)
-  local command = { vim.v.progpath, "-c", startup }
+  local command = {
+    vim.v.progpath, "--cmd", "let g:rex_diffview_overlay = v:true", "-c", startup,
+  }
   if path ~= "" then vim.list_extend(command, { "--", path }) end
 
   opening = true
@@ -91,6 +89,12 @@ function M.open(kind, args, callback)
       finish(layer_err, result)
     end, vim.json.encode(layer))
   end)
+end
+
+function M.open(kind, args, callback)
+  if require("config.neorex").active then return M.open_overlay(kind, args, callback) end
+  native(kind or "diff", args or {})
+  if callback then callback(nil, { native = true }) end
 end
 
 function M.history(args, callback)

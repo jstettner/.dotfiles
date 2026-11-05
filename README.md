@@ -82,6 +82,11 @@ in the editor\'s Rex tab, leaving the tiled panes alone. Closing the last Diffvi
 with `<Space>dc` or `:DiffviewClose` also exits that review process and its floating
 pane. Unsaved edits made during review prevent automatic exit.
 
+The floating reviewer uses NeoRex's palette colors and statusline when
+`~/src/neorex/runtime` is installed, so Rex controls its colors too. Its native
+TUI uses ANSI palette colors rather than fixed RGB colors. Ordinary Neovim
+outside the reviewer keeps its usual theme.
+
 Save or discard changed NeoRex buffers first: the separate reviewer reads files
 from disk, not NeoRex\'s unsaved buffers. Launch failures do not fall back to the
 broken split layout. Ordinary Neovim still opens Diffview in-process.
@@ -92,6 +97,29 @@ Use `:RexDiffview origin/main...HEAD` for branch changes in either frontend;
 like any other file. Diffview and annotations are separate: the annotation bridge
 does not treat a historical diff buffer as a current file. Open the real file to
 comment on it.
+
+#### Opening a review from an agent or script
+
+Chezmoi installs `~/.local/bin/rex-diffview`. Run it from the repository/worktree
+in any Rex pane, including an agent's tool shell; NeoRex need not be running:
+
+```sh
+rex-diffview                       # uncommitted changes; staged/unstaged entries separate
+rex-diffview HEAD                  # all uncommitted changes against HEAD
+rex-diffview origin/main...HEAD    # committed branch changes since the merge base
+rex-diffview --history README.md   # file history
+```
+
+It uses the existing Rex RPC API to open the same floating reviewer in the
+caller's tab. Success prints one JSON object containing `layer_id`, `block_ids`
+and Rex's revision. Errors go to stderr with a nonzero exit. Exit 0 means the
+reviewer was opened, **not** that a human reviewed or approved anything.
+`rex-diffview --help` describes the arguments; `-- PATH...` filters a diff.
+
+Diffview does not persist viewed-file checkmarks or a last-reviewed checkpoint.
+Use an explicit revision/range to compare with a known review point. Capturing
+uncommitted work as a review checkpoint would need a separate, explicit action;
+merely opening the reviewer must not mark changes as reviewed.
 
 ### Mermaid
 

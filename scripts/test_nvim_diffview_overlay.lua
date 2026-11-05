@@ -72,11 +72,14 @@ local ok, err = xpcall(function()
   eq(#vim.api.nvim_list_tabpages(), tabs)
   eq(vim.api.nvim_get_current_buf(), source)
   local command = state.layer.layout.block.options.command
-  eq(command[4], "--")
-  eq(command[5], vim.api.nvim_buf_get_name(source))
+  eq(command[2], "--cmd")
+  eq(command[3], "let g:rex_diffview_overlay = v:true")
+  eq(command[4], "-c")
+  eq(command[6], "--")
+  eq(command[7], vim.api.nvim_buf_get_name(source))
   local startup, saved_start = nil, bridge.start
   bridge.start = function(options) startup = options end
-  assert(loadstring(command[3]:gsub("^lua ", "")))()
+  assert(loadstring(command[5]:gsub("^lua ", "")))()
   bridge.start = saved_start
   eq(startup, { kind = "diff", args = { "origin/main...HEAD" } })
   print("PASS: NeoRex launches one native-Neovim block in its own Rex tab's floating layer")
@@ -87,7 +90,7 @@ local ok, err = xpcall(function()
   wait(function() return history_done end)
   command = state.layer.layout.block.options.command
   bridge.start = function(options) startup = options end
-  assert(loadstring(command[3]:gsub("^lua ", "")))()
+  assert(loadstring(command[5]:gsub("^lua ", "")))()
   bridge.start = saved_start
   eq(startup.kind, "history")
   eq(startup.args, { vim.api.nvim_buf_get_name(source) })
@@ -154,6 +157,13 @@ local ok, err = xpcall(function()
     local options = vim.json.encode({ kind = kind, args = kind == "history" and { path } or {} })
     local code = string.format([[
       assert(not require("config.neorex").active)
+      if require("config.neorex").enabled then
+        assert(vim.g.colors_name == "neorex")
+        assert(not vim.o.termguicolors)
+        local normal = vim.api.nvim_get_hl(0, {name="Normal"})
+        assert(not normal.fg and not normal.bg)
+        assert(require("lualine").get_config().options.theme == "neorex")
+      end
       require("config.rex_diffview").start(vim.json.decode(%q))
       assert(vim.wait(5000, function()
         local view = require("diffview.lib").get_current_view()
@@ -175,7 +185,7 @@ local ok, err = xpcall(function()
       require("config.rex_diffview").close()
     ]], options, kind)
     local child = original_system(
-      { vim.v.progpath, "--headless", "-i", "NONE", "-c", "lua " .. code, "--", path },
+      { vim.v.progpath, "--headless", "-i", "NONE", "--cmd", "let g:rex_diffview_overlay = v:true", "-c", "lua " .. code, "--", path },
       { text = true, cwd = directory, timeout = 10000 }
     ):wait()
     eq(child.code, 0)
