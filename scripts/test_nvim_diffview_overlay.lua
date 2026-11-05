@@ -170,6 +170,13 @@ local ok, err = xpcall(function()
         if %q == "diff" then return view and view.files and view.files:len() == 1 end
         return view and view.ready and view.panel.entries and #view.panel.entries == 1 and not view.panel.updating
       end, 20))
+      if vim.g.colors_name == "neorex" then
+        local changed = vim.api.nvim_get_hl(0, {name="DiffviewDiffChange",link=false})
+        local words = vim.api.nvim_get_hl(0, {name="DiffviewDiffText",link=false})
+        assert(changed.ctermbg and not changed.ctermfg and not changed.reverse)
+        assert(words.ctermbg and not words.ctermfg and not words.reverse)
+        assert(vim.api.nvim_get_hl(0, {name="DiffviewDiffAddAsDelete",link=false}).ctermbg)
+      end
       if require("diffview.lib").get_current_view().files then
         vim.o.columns = 200
         vim.api.nvim_exec_autocmds("VimResized", {})

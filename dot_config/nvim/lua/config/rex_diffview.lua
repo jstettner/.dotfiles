@@ -43,6 +43,7 @@ function M.start(options)
     end,
   })
   native(options.kind, options.args)
+  require("config.rex_diff_colors").setup()
 end
 
 function M.open_overlay(kind, args, callback)

@@ -11,6 +11,7 @@ return {
     },
     init = function() require("config.rex_diffview").setup() end,
     opts = {
+      enhanced_diff_hl = true,
       view = {
         default = { winbar_info = true },
         file_history = { winbar_info = true },

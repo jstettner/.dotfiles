@@ -84,8 +84,11 @@ pane. Unsaved edits made during review prevent automatic exit.
 
 The floating reviewer uses NeoRex's palette colors and statusline when
 `~/src/neorex/runtime` is installed, so Rex controls its colors too. Its native
-TUI uses ANSI palette colors rather than fixed RGB colors. Ordinary Neovim
-outside the reviewer keeps its usual theme.
+TUI uses ANSI palette colors rather than fixed RGB colors. Diffs use separate
+light/dark background tints: green additions, red removals, neutral changed lines
+and stronger changed-word emphasis, without turning whole lines yellow or
+inverting their foregrounds. The text and syntax keep Rex\'s colors. Ordinary
+Neovim outside the reviewer keeps its usual theme.
 
 Save or discard changed NeoRex buffers first: the separate reviewer reads files
 from disk, not NeoRex\'s unsaved buffers. Launch failures do not fall back to the
@@ -148,6 +151,7 @@ Additional Neovim checks (feedback delivery is mocked; no real agent is sent inp
 nvim --headless -i NONE '+luafile scripts/test_nvim_rex_feedback.lua' '+qa!'
 nvim --headless -i NONE '+luafile scripts/test_nvim_diffview.lua' '+qa!'
 nvim --headless -i NONE '+luafile scripts/test_nvim_diffview_overlay.lua' '+qa!'
+nvim --headless -i NONE '+luafile scripts/test_nvim_diff_colors.lua' '+qa!'
 ```
 
 ## Rex
