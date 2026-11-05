@@ -45,11 +45,18 @@ Chezmoi installs `termaid` with `uv` on macOS and Linux and restores the pinned
 Neovim plugins. Existing renderer installations are left alone.
 
 - `<Space>mp` (or Enter inside a block): open a floating preview; `q` closes it.
-- `<Space>mt`: toggle the diagram under the cursor.
-- `<Space>mr`: re-render all diagrams in the buffer.
+- `<Space>mt`: toggle the diagram under the cursor, scrolling to the diagram or source.
+- `<Space>mr`: re-render and unhide all diagrams, scrolling to the current block's diagram.
+
+Inline diagrams appear above their opening code fence; the source stays editable.
+Put the cursor inside a Mermaid block before using the shortcuts. Large diagrams
+may not fit inline: use the floating preview to pan around them.
 
 Restart Neovim after applying the config. Text rendering supports a subset of
 Mermaid syntax, not the full browser renderer.
+
+With plugins installed, check the shortcuts and their visible output with
+`nvim --headless -i NONE '+luafile scripts/test_nvim_mermaid.lua' '+qa!'`.
 
 ## Rex
 
