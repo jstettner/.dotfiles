@@ -39,6 +39,49 @@ Run `chezmoi apply` to deploy the tracked config.
 
 ## Neovim
 
+### Annotating buffers for Pi
+
+In Neovim or NeoRex running inside Rex, select text and press `<Space>ac`.
+In normal mode it captures the current line; character, line and block selections
+capture exactly the selected text, including unsaved edits. The source is not changed.
+
+Write your comment in the floating Markdown buffer, using normal Vim editing:
+
+- `:wq` submits and closes. Writing is the submit action, so `:w` submits too.
+- `:q!` without writing discards the comment.
+- One Pi process in the editor's Rex tab receives the feedback directly. Multiple
+  Pi processes open the usual floating picker; other tabs and shells are excluded.
+
+Feedback includes the source path, line range, selected text and comment. The
+bridge pastes one message into the chosen Pi input and presses Enter, like the
+existing Rex annotation launcher. Leave the target's input empty. A successful
+dispatch means the terminal accepted the input, not an acknowledgment from Pi.
+
+Failures and picker cancellation retain the draft in this Neovim process:
+`:RexFeedbackResume` (or `<Space>ac`) reopens it. Drafts are not written to disk
+and do not survive exiting Neovim. If a paste succeeded but Enter failed, inspect
+Pi's input manually; the bridge refuses to paste the same draft again.
+
+The `rex` CLI and the pane's inherited `REX_SESSION` / `REX_BLOCK` are required.
+The bridge rechecks the chosen process and tab before pasting and before Enter.
+It does not start agents, change focus to them or retry delivery automatically.
+`:RexFeedback` also supports explicit line ranges.
+
+### Diffview
+
+[Diffview](https://github.com/sindrets/diffview.nvim) uses its defaults:
+
+- `<Space>dv`: open working-tree diffs (`:DiffviewOpen`).
+- `<Space>dh`: history of the current file.
+- `<Space>dc`: close the diff view.
+
+Use `:DiffviewOpen origin/main...HEAD` for branch changes. Markdown diffs work
+like any other file. Diffview and annotations are separate: the annotation bridge
+does not treat a historical diff buffer as a current file. Open the real file to
+comment on it.
+
+### Mermaid
+
 Mermaid code blocks in Markdown render inline as text diagrams with
 [mermaid-nvim](https://github.com/searleser97/mermaid-nvim), including inside Rex.
 Chezmoi installs `termaid` with `uv` on macOS and Linux and restores the pinned
@@ -57,6 +100,13 @@ Mermaid syntax, not the full browser renderer.
 
 With plugins installed, check the shortcuts and their visible output with
 `nvim --headless -i NONE '+luafile scripts/test_nvim_mermaid.lua' '+qa!'`.
+
+Additional Neovim checks (feedback delivery is mocked; no real agent is sent input):
+
+```sh
+nvim --headless -i NONE '+luafile scripts/test_nvim_rex_feedback.lua' '+qa!'
+nvim --headless -i NONE '+luafile scripts/test_nvim_diffview.lua' '+qa!'
+```
 
 ## Rex
 
