@@ -10,12 +10,12 @@ Follow the current repository's instructions (`AGENTS.md`, when present) and its
   Do not automatically invoke the next workflow; suggest its command and wait for the user.
 - `{SKILLBASE}` means the directory containing the invoked skill's `SKILL.md`. Resolve reference paths
   and this file's relative links against that directory, not the working directory.
-- Find task documents from the user's request or prior conversation. If the task directory is unknown or
-  ambiguous, ask the user. Do not expect an injected artifact-directory section in the system prompt.
-- Keep using `.humanlayer/tasks/<task-slug>/` for local artifacts, including existing tasks. The name is
-  retained for compatibility; no HumanLayer service is involved. Confirm that local artifacts are ignored
-  before committing code; do not commit them. The directory may contain symlinks. Use `ls -La` to inspect it;
-  do not assume it exists or is always a symlink.
+- The task directory is `.local/tasks/<task>/` at the repository (or worktree) root, where `init-task` puts
+  `task.md`; `<task>` in a workflow's paths is its name. Use the task the user names. Otherwise, if
+  `.local/tasks/` holds exactly one directory, use it; if it holds several, ask which. If it holds none when a
+  workflow writes its first artifact, ask the user for a task name (lowercase kebab-case) and create
+  `.local/tasks/<name>/`. Every artifact for the task goes directly in its directory.
+- `/.local/tasks/` is ignored by the global gitignore; never commit task artifacts.
 - Link to the actual local document or HTML file with ordinary Markdown links. There is no cloud upload,
   artifact viewer, sidebar, comment tool, automatic permalink, or automatic workflow advancement.
   Never invent a cloud URL or promise these features.

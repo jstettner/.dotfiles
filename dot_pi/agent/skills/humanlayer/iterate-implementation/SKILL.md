@@ -14,8 +14,7 @@ An implementation plan was implemented and a user has follow-on feedback - it mi
 
 1. **Read all input files FULLY**:
    - Use Read tool WITHOUT limit/offset to read the plan document and any other provided paths
-   - If a ticket like ENG-1234 or a task is mentioned, find the task directory: `ls -La .humanlayer/tasks/ | grep -i TEAMID-XXX` - you must use Bash(ls | grep) for this as your glob/grep tools don't traverse symlinks
-   - `ls -La .humanlayer/tasks/TASKNAME` to find all related documents in the task directory. Do NOT use the grep or glob tools or `ls` without `-L` or with a lowercase `-l` as the directory may be a symlink.
+   - `ls -la .local/tasks/<task>` to find all related documents in the task directory
    - Read the plan file (e.g. `NN-plan-DESCRIPTION.md`) to understand the work that was prescribed
    - Read prior artifacts in the task directory for context: `ticket.md` or `task.md`, research documents, design discussion, and structure outline
    - **If no plan exists**, read the ticket, structure outline, design discussion, and research documents instead

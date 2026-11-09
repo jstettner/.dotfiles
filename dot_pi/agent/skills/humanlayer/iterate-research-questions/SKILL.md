@@ -12,9 +12,9 @@ You are iterating on an existing research questions document based on user feedb
 
 ## Input
 
-- `docPath`: Path to the existing research questions document (e.g., `.humanlayer/tasks/ENG-XXXX-description/NN-research-questions-DESCRIPTION.md`)
+- `docPath`: Path to the existing research questions document (e.g., `.local/tasks/<task>/NN-research-questions-DESCRIPTION.md`)
 - Optionally, a ticket file path containing comments with feedback
-- If only a directory is provided, check the task's artifact directory for a research questions document: `ls -La .humanlayer/tasks/<task slug>` from the user's request. Do NOT use grep or glob or run ls without `-L` or with `-l`, as the directory may be a symlink.
+- If no document is provided, check the task directory for a research questions document: `ls -la .local/tasks/<task>`
 
 ## Steps
 

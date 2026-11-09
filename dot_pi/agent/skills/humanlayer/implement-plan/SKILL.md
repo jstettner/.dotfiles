@@ -8,7 +8,7 @@ Before following this workflow, read [Pi runtime instructions](../runtime.md).
 
 # Phased Implementation Orchestrator
 
-You are responsible for orchestrating the phased implementation of technical plans from `.humanlayer/tasks/`. You will work through each phase systematically using a specialized implementer agent.
+You are responsible for orchestrating the phased implementation of technical plans from `.local/tasks/<task>/`. You will work through each phase systematically using a specialized implementer agent.
 
 ## Workflow
 
@@ -16,14 +16,14 @@ For each phase in the implementation plan:
 
 ### 0. Locate Plan File
 If you were provided with a path to a plan file, proceed with the plan.
-If you were provided with a task artifact directory like `.humanlayer/tasks/<task slug>` you should list the contents with `ls -La` to locate the plan file inside of it, e.g. `ls -La .humanlayer/tasks/<task slug>`. Do NOT use Glob or Grep or `ls` without `-L` or with `-l`, as the directory may be a symlink.
+Otherwise, list the task directory with `ls -la .local/tasks/<task>` to locate the plan file inside of it.
 
 ### 1. Launch Implementer Agent
 Use `subagent spawn --name implement-phase-N` with an implementer role in the prompt to implement the current phase. Provide clear instructions about which phase to implement.
 
 Example:
 ```
-Implement Phase [N] of the plan at .humanlayer/tasks/ENG-XXXX-description/NN-plan-DESCRIPTION.md
+Implement Phase [N] of the plan at .local/tasks/<task>/NN-plan-DESCRIPTION.md
 Focus only on Phase [N] and stop after completing automated verification.
 ```
 
@@ -70,7 +70,7 @@ Wait for the human to:
 
 ### 6. Commit the changes
 - Create a new commit for the changes
-- Do not commit `.humanlayer/tasks/`; confirm that local task artifacts are ignored.
+- Do not commit `.local/tasks/`; confirm that local task artifacts are ignored.
 
 ### 7. Repeat for Next Phase
 When prompted, repeat this workflow for the next phase.

@@ -64,11 +64,9 @@ If the user asks to "continue working through questions" or "keep grilling" or s
 ## Steps
 
 1. **Find and read the task directory**:
-   - You should know the task directory, if not ask the user
-   - `ls -La .humanlayer/tasks/TASKNAME` to find all related documents in the task directory. Do NOT use the Grep or Glob tools, or `ls -l` (lower case L) as the directory may be a symlink.
+   - `ls -la .local/tasks/<task>` to find all related documents in the task directory
    - Read ALL files in the task directory, including the current TDD and prior artifacts (`ticket.md` or `task.md`, research, design discussion, PRD if present, etc.)
    - **IMPORTANT**: Use the Read tool WITHOUT limit/offset parameters to read entire files, never read files partially
-   - **IMPORTANT**: DO NOT use Glob or Grep on .humanlayer/tasks — it may be a symlink
 
 2. **If the user gives any input**:
    - DO NOT just accept the correction blindly
@@ -178,13 +176,13 @@ sequenceDiagram
 Use HTML artifacts when a concept is too complex for Mermaid or plain text, especially when you need to combine code shape, data flow, UI structure, colors, annotations, or side-by-side comparisons.
 
 **Creating HTML artifacts:**
-- Write HTML files to `.humanlayer/tasks/{task-slug}/diagram-{description}.html`
+- Write HTML files to `.local/tasks/<task>/diagram-{description}.html`
 - Read `{SKILLBASE}/references/artifact_template.html` and follow it - copy its `<style>` block and build your content with its prose elements and utility classes so the artifact matches this application's visual language, not the codebase the TDD is about
 - Keep each artifact focused on the decision at hand
 - Use realistic labels, not lorem ipsum
 
 **Displaying HTML artifacts inline:**
-[View HTML artifact](.humanlayer/tasks/{task-slug}/diagram-{description}.html)
+[View HTML artifact](.local/tasks/<task>/diagram-{description}.html)
 </guidance>
 
 <guidance>

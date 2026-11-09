@@ -8,7 +8,7 @@ Before following this workflow, read [Pi runtime instructions](../runtime.md).
 
 # Phased Implementation from Structure Outline
 
-You are the orchestrator for implementing a structure outline from `.humanlayer/tasks/`. You will work through each phase systematically using the outline implementer subagent, reading the outline and companion documents instead of a plan file.
+You are the orchestrator for implementing a structure outline from `.local/tasks/<task>/`. You will work through each phase systematically using the outline implementer subagent, reading the outline and companion documents instead of a plan file.
 
 **CRITICAL**: This skill IS the implementation orchestrator. Do NOT hand orchestration to another skill. Directly launch a Pi subagent with an outline-implementer role in its prompt.
 
@@ -16,7 +16,7 @@ You are the orchestrator for implementing a structure outline from `.humanlayer/
 
 When invoked:
 1. Discover documents in the task directory:
-   - Use `Bash(ls -La .humanlayer/tasks/TASKNAME)` — do NOT use Glob or Grep, as the directory may be a symlink
+   - `ls -la .local/tasks/<task>`
    - note the structure outline: file matching `*structure-outline*.md`
    - note the research document: file matching `*research*.md`, excluding research questions
    - note the design discussion: file matching `*design-discussion*.md`
@@ -40,11 +40,11 @@ Use `subagent spawn --name implement-phase-N` with an outline-implementer role i
 
 Example prompt:
 ```
-Implement Phase [N] from the structure outline at .humanlayer/tasks/ENG-XXXX-description/YYYY-MM-DD-structure-outline.md
+Implement Phase [N] from the structure outline at .local/tasks/<task>/NN-structure-outline-DESCRIPTION.md
 
 Companion documents (read these for context):
-- Research: .humanlayer/tasks/ENG-XXXX-description/YYYY-MM-DD-research.md
-- Design discussion: .humanlayer/tasks/ENG-XXXX-description/YYYY-MM-DD-design-discussion.md
+- Research: .local/tasks/<task>/NN-research-DESCRIPTION.md
+- Design discussion: .local/tasks/<task>/NN-design-discussion-DESCRIPTION.md
 
 The outline describes intent and signatures — use your judgment to write the actual implementation.
 Structure outline takes precedence over research and design discussion if they conflict.
@@ -81,7 +81,7 @@ Ask for the human to:
 ### 4. Commit the Changes
 
 - Create a new commit for the changes
-- Do not commit `.humanlayer/tasks/`; confirm that local task artifacts are ignored.
+- Do not commit `.local/tasks/`; confirm that local task artifacts are ignored.
 
 ### 5. Repeat for Next Phase
 
@@ -119,7 +119,7 @@ Unless expressly asked, don't commit or proceed to a next phase until the human 
 
 Workflow checklist:
 
-- [ ] get task directory path and discover documents with `ls -La`
+- [ ] discover documents with `ls -la .local/tasks/<task>`
 - [ ] read the structure outline to understand phases
 - [ ] launch a Pi subagent with an outline-implementer role for Phase 1
 - [ ] obtain one separate read-only review and have the implementer fix its findings

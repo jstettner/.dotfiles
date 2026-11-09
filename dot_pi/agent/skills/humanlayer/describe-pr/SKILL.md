@@ -43,7 +43,7 @@ Create or update the pull request for the current task with a concise descriptio
    - Do not add walkthrough artifacts, exhaustive implementation narratives, verification checklists, changelog text, or plan-deviation sections.
 
 5. Save and publish the description:
-   - Use `.humanlayer/tasks/{task-slug}/pr-description.md` when the task directory exists; otherwise use `.humanlayer/tasks/pr-{number}/description.md`.
+   - Write it to `.local/tasks/<task>/pr-description.md`.
    - Update the PR with `gh pr edit {number} --body-file {output-path}`.
    - Confirm the update succeeded.
 

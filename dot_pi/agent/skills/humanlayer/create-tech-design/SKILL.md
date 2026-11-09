@@ -40,7 +40,7 @@ You fully settle and get the user's sign-off on the System Design before you ope
 <step index="1" name="understand-the-context">
 
 <instructions>
-- Find the task directory: `ls -La .humanlayer/tasks/TASKNAME` (use Bash `ls -La` - not Grep/Glob - the directory may be a symlink).
+- List the task directory: `ls -la .local/tasks/<task>`.
 - Read every relevant file in the task directory **fully** (Read with no limit/offset), excluding research-questions docs.
 - Read the TDD template: `Read({SKILLBASE}/references/tech_design_template.md)`.
 </instructions>
@@ -61,7 +61,7 @@ There is no required upstream artifact. The product context might be a full PRD,
 <step index="2" name="write-the-skeleton">
 
 <instructions>
-Write the doc to `.humanlayer/tasks/ENG-XXXX-description/NN-tdd-DESCRIPTION.md` (next zero-padded `NN-` index in the task dir; `DESCRIPTION` is a 2-4 word kebab-case slug).
+Write the doc to `.local/tasks/<task>/NN-tdd-DESCRIPTION.md` (next zero-padded `NN-` index in the task dir; `DESCRIPTION` is a 2-4 word kebab-case slug).
 
 **Keep the skeleton as minimal as possible. No preamble, no setup, no summaries.** The faster you reach the first question, the more the user stays engaged in building the TDD. Write only:
 - Frontmatter with `type: design-tdd`, plus the top-level title
@@ -149,9 +149,9 @@ If the codebase uses an ORM or a schema-definition library, the equivalent ORM-s
 ## HTML artifacts for complex concepts
 
 When a concept is too complex for Mermaid or plain text - combining data flow, structure, annotations, or side-by-side comparisons - write a focused HTML artifact and display it inline:
-- Write to `.humanlayer/tasks/{task-slug}/diagram-{description}.html`
+- Write to `.local/tasks/<task>/diagram-{description}.html`
 - Keep each artifact focused on the decision at hand; use realistic labels, not lorem ipsum
-[View HTML artifact](.humanlayer/tasks/{task-slug}/diagram-{description}.html)
+[View HTML artifact](.local/tasks/<task>/diagram-{description}.html)
 
 **If you are writing an HTML artifact, read `{SKILLBASE}/references/artifact_template.html` and follow it.** Copy its `<style>` block and build your content in the body using its prose elements and utility classes (`.card`, `.badge*`, `.stat*`, `.ba`). The artifact must follow the template so it matches this application, not the codebase the TDD is about.
 </guidance>

@@ -35,7 +35,7 @@ You run the PRD as a guided conversation. You settle the **foundation** - the pr
 <step index="1" name="understand-the-context">
 
 <instructions>
-- Find the task directory: `ls -La .humanlayer/tasks/TASKNAME` (use Bash `ls -La` - not Grep/Glob - the directory may be a symlink).
+- List the task directory: `ls -la .local/tasks/<task>`.
 - Read every relevant file in the task directory **fully** (Read with no limit/offset), excluding research-questions docs.
 - Read the PRD template: `Read({SKILLBASE}/references/prd_template.md)`.
 </instructions>
@@ -62,7 +62,7 @@ If the work touches UI/UX, your mockups should match the **user's product** - it
 <step index="2" name="write-the-skeleton">
 
 <instructions>
-Write the doc to `.humanlayer/tasks/ENG-XXXX-description/NN-prd-DESCRIPTION.md` (next zero-padded `NN-` index in the task dir; `DESCRIPTION` is a 2-4 word kebab-case slug).
+Write the doc to `.local/tasks/<task>/NN-prd-DESCRIPTION.md` (next zero-padded `NN-` index in the task dir; `DESCRIPTION` is a 2-4 word kebab-case slug).
 
 **Keep the skeleton as minimal as possible. No preamble, no setup, no summaries.** The faster you reach the first question, the more the user stays engaged in building the PRD. Write only:
 - Frontmatter with `type: design-prd`, plus the top-level title
@@ -124,12 +124,12 @@ When an answer reshapes the work, touch every affected section in the same pass:
 
 Mockups are how you communicate visually - use them liberally when discussing UI.
 
-- Write HTML files to `.humanlayer/tasks/{task-slug}/mockup-{description}.html`
+- Write HTML files to `.local/tasks/<task>/mockup-{description}.html`
 - Follow the **user's product** design system (colors, fonts, components) found in Step 1; use realistic labels, not lorem ipsum
 - Keep each mockup focused on the decision at hand
 
 Display inline:
-[View HTML artifact](.humanlayer/tasks/{task-slug}/mockup-{description}.html)
+[View HTML artifact](.local/tasks/<task>/mockup-{description}.html)
 
 Update mockups as decisions evolve; the final PRD should embed the "winning" versions.
 </guidance>

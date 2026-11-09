@@ -23,11 +23,9 @@ Then wait for the user's feedback before proceeding.
 ## Steps
 
 1. **Find and read the task directory**:
-   - You should know the task directory, if not ask the user
-   - `ls -La .humanlayer/tasks/TASKNAME` to find all related documents in the task directory. Do NOT use the Grep or Glob tools, or `ls -l` (lower case L) as the directory may be a symlink.
+   - `ls -la .local/tasks/<task>` to find all related documents in the task directory
    - Read ALL files in the task directory, including the current design discussion document and prior artifacts (`ticket.md` or `task.md`, research, etc.)
    - **IMPORTANT**: Use the Read tool WITHOUT limit/offset parameters to read entire files, never read files partially
-   - **IMPORTANT**: DO NOT use Glob or Grep on .humanlayer/tasks — it may be a symlink
 
 2. **If the user gives any input**:
    - DO NOT just accept the correction blindly

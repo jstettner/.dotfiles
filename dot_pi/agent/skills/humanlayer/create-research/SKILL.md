@@ -21,11 +21,11 @@ You are tasked with conducting comprehensive research across the codebase to ans
 
 ## Initial Setup:
 
-When this command is invoked, check the task artifact directory from the user's request or prior conversation for documents like `*research-questions*.md` with `ls -La` (the directory may be a symlink - do NOT use regular `ls` or grep/glob tools). If you find one, read it and proceed with the contents as the research query.
+When this command is invoked, check the task directory for documents like `*research-questions*.md` with `ls -la .local/tasks/<task>`. If you find one, read it and proceed with the contents as the research query.
 
 If you see several, ask the user which one to proceed with before reading any of them.
 
-If you do not know what the task artifact directory is from the user's request or prior conversation, respond with:
+If you do not find one, respond with:
 ```
 I'm ready to research the codebase. Please provide your research question or area of interest, and I'll analyze it thoroughly by exploring relevant components and connections.
 ```
@@ -78,19 +78,16 @@ Then wait for the user's research query.
    - Prioritize live codebase findings as primary source of truth
    - Connect findings across different components
    - Include specific file paths and line numbers for reference
-   - Verify all artifact paths are correct (task-specific files go in .humanlayer/tasks/)
+   - Verify all artifact paths are correct (task-specific files go in .local/tasks/<task>/)
    - Highlight patterns, connections, and architectural decisions
    - Answer the user's specific questions with concrete evidence
 
 5. **Gather metadata for the research document:**
-   - Filename: `.humanlayer/tasks/TASKNAME/NN-research-DESCRIPTION.md`
-     - First, check the task directory in the user's request or prior conversation. If you do not see it, find the task directory: `ls -La .humanlayer/tasks | grep -i "eng-XXXX"`
-     - If the directory doesn't exist, create: `.humanlayer/tasks/ENG-XXXX-description/`
+   - Filename: `.local/tasks/<task>/NN-research-DESCRIPTION.md`
+     - If the task directory doesn't exist, create it as runtime.md describes
      - Format: `NN-research-DESCRIPTION.md` where NN is a zero-padded chronological index and DESCRIPTION is a 2-4 word kebab-case slug
-     - **Chronological indexing**: `ls -La` the task directory, find the highest existing NN- prefix, and use the next number. First document = `01-`, second = `02-`, etc.
-     - Directory naming:
-       - With ticket: `.humanlayer/tasks/ENG-1478-parent-child-tracking/02-research-parent-child-tracking.md`
-       - Without ticket: `.humanlayer/tasks/authentication-flow/02-research-auth-flow.md`
+     - **Chronological indexing**: `ls .local/tasks/<task>`, find the highest existing NN- prefix, and use the next number. First document = `01-`, second = `02-`, etc.
+     - Example: `.local/tasks/<task>/02-research-auth-flow.md`
 
 6. **Generate research document:**
    - Use the metadata gathered in step 5
@@ -98,7 +95,7 @@ Then wait for the user's research query.
 
    `Read({SKILLBASE}/references/research_template.md)`
 
-   - Write the document to `.humanlayer/tasks/TASKNAME/NN-research-DESCRIPTION.md`
+   - Write the document to `.local/tasks/<task>/NN-research-DESCRIPTION.md`
 
 7. **Attempt to answer open questions**
    - if there are open questions in the doc you write, dispatch subagents to additional targeted research AFTER you write the doc
@@ -256,8 +253,8 @@ Pick the views that make each part of the story clearest:
   - ALWAYS wait for all sub-agents to complete before synthesizing (step 4)
   - ALWAYS gather metadata before writing the document (step 5 before step 6)
   - NEVER write the research document with placeholder values
-- **Path handling**: Task-specific research goes in .humanlayer/tasks/
-  - Use `.humanlayer/tasks/ENG-XXXX-description/NN-research-DESCRIPTION.md` for task research
+- **Path handling**: Task-specific research goes in .local/tasks/<task>/
+  - Use `.local/tasks/<task>/NN-research-DESCRIPTION.md` for task research
 
 ## Response
 

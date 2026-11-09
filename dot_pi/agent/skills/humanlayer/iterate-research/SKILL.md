@@ -12,11 +12,11 @@ You are iterating on an existing research document based on user feedback.
 
 ## Initial Setup:
 
-When this command is invoked, check the task artifact directory from the user's request or prior conversation for documents like `*research*.md` (NOT `*research-questions*.md` - `research-questions` documents are EXCLUDED) with `ls -La` (the directory may be a symlink - do NOT use regular `ls` or grep/glob tools). If you find a research document, read it and proceed.
+When this command is invoked, check the task directory for documents like `*research*.md` (NOT `*research-questions*.md` - `research-questions` documents are EXCLUDED) with `ls -la .local/tasks/<task>`. If you find a research document, read it and proceed.
 
 If you see several research documents, ask the user which one to proceed with before reading any of them.
 
-If you do not know what the artifact task directory is from the user's request or prior conversation, respond with:
+If you do not find a research document, respond with:
 ```
 I'm ready to iterate on researching the codebase. Please provide your research question or area of interest, and I'll analyze it thoroughly by exploring relevant components and connections.
 ```
@@ -31,7 +31,7 @@ I'm ready to iterate on researching the codebase. Please provide your research q
    - Focus on the research document and provided feedback, not unrelated task artifacts.
    - **DO NOT read ticket files** - research must stay objective about the current codebase.
    - **If a document path was not provided:**
-         - List the contents of the task's artifact directory from the user's request. Run `ls -La .humanlayer/tasks/<task slug>` to find all related documents in the task directory. Do not use glob or grep, or use `ls -l` or `ls` without `-L` as the directory may be a symlink.
+         - Run `ls -la .local/tasks/<task>` to find all related documents in the task directory.
 
 
 2. **Process the feedback**:
@@ -205,8 +205,8 @@ npm install example
   - ALWAYS wait for all sub-agents to complete before synthesizing (step 4)
   - ALWAYS gather metadata before writing the document (step 5 before step 6)
   - NEVER write the research document with placeholder values
-- **Path handling**: Task-specific research goes in .humanlayer/tasks/
-  - Use `.humanlayer/tasks/ENG-XXXX-description/NN-research-DESCRIPTION.md` for task research
+- **Path handling**: Task-specific research goes in .local/tasks/<task>/
+  - Use `.local/tasks/<task>/NN-research-DESCRIPTION.md` for task research
 </guidance>
 
 

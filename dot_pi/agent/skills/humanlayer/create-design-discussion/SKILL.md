@@ -13,16 +13,14 @@ You are now in the Design Discussion phase. Based on the research findings and t
 ## Steps to follow after receiving the user's request
 
 1. **Read the files in the task artifact directory and any mentioned files immediately and FULLY**:
-   - `ls -La .humanlayer/tasks/TASKSLUG` to find all related documents in the task directory. Do NOT use the Grep or Glob tools, or `ls -l` as the directory may be a symlink.\
-   - Ticket files (e.g., `.humanlayer/tasks/eng-1234-description/ticket.md` or `task.md`)
-   - Research documents (e.g. `.humanlayer/tasks/eng-1234-description/NN-research-DESCRIPTION.md`)
+   - `ls -la .local/tasks/<task>` to find all related documents in the task directory
+   - Ticket files (e.g., `.local/tasks/<task>/ticket.md` or `.local/tasks/<task>/task.md`)
+   - Research documents (e.g. `.local/tasks/<task>/NN-research-DESCRIPTION.md`)
    - **DO NOT read research questions documents** - research questions are inputs to the research phase only.
    - **IMPORTANT**: Use the Read tool WITHOUT limit/offset parameters to read entire files, never read files partially - if a file is mentioned, read it completely
    - do not spawn sub-tasks before reading these files yourself in the main context
 
 2. **Check for related task content**:
-   - if a path in `.humanlayer/tasks/TASKNAME` is mentioned, use Bash(`ls -La .humanlayer/tasks/TASKNAME`)
-   - **IMPORTANT** DO NOT USE search or glob or grep, or `ls -l` (lowercase L), as .humanlayer/tasks may be a symlink and those tools don't traverse symlinks
    - read all relevant files in the task directory to fully understand the work so far, excluding research questions documents
 
 3. **Optional - Spawn parallel sub-tasks for comprehensive research**:
@@ -59,14 +57,11 @@ You are now in the Design Discussion phase. Based on the research findings and t
 - Use the smallest set of visual views needed to make the current state, proposed end state, and key design choices clear.
 - Place each visual next to the short text it supports. Do not add visuals that do not help the user make a design decision.
 
-5. **Write the design discussion** to `.humanlayer/tasks/ENG-XXXX-description/NN-design-discussion-DESCRIPTION.md`
-   - First, check the task directory in the user's request or prior conversation. If you don't see it, find the task directory: `ls -La .humanlayer/tasks | grep -i "eng-XXXX"`
-   - If the directory doesn't exist, create: `.humanlayer/tasks/ENG-XXXX-description/`
+5. **Write the design discussion** to `.local/tasks/<task>/NN-design-discussion-DESCRIPTION.md`
+   - If the task directory doesn't exist, create it as runtime.md describes
    - Format: `NN-design-discussion-DESCRIPTION.md` where NN is a zero-padded chronological index and DESCRIPTION is a 2-4 word kebab-case slug
-   - **Chronological indexing**: `ls` the task directory, find the highest existing NN- prefix, and use the next number. First document = `01-`, second = `02-`, etc.
-   - Directory naming:
-     - With ticket: `.humanlayer/tasks/ENG-1478-parent-child-tracking/03-design-discussion-parent-child-tracking.md`
-     - Without ticket: `.humanlayer/tasks/improve-error-handling/03-design-discussion-error-handling.md`
+   - **Chronological indexing**: `ls .local/tasks/<task>`, find the highest existing NN- prefix, and use the next number. First document = `01-`, second = `02-`, etc.
+   - Example: `.local/tasks/<task>/03-design-discussion-error-handling.md`
 
 <content_guidance>
 **Outline High-level product spec** - Current state, desired end state, what we're not doing in terms of user experience or functionality

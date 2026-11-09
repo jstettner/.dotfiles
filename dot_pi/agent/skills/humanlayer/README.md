@@ -26,8 +26,9 @@ details do not need to live in always-loaded repository instructions. Research u
 implementation has one independent review round and parent-run checks, following the current repository's rules.
 External research uses the parent's web tools.
 
-Artifacts remain local in `.humanlayer/tasks/`; confirm they are ignored before committing code. Cloud mirroring,
-comment tools, HumanLayer session trailers, UI buttons, and automatic advancement are not part of this fork.
+Each task's artifacts live in `.local/tasks/<task>/` at the repository (or worktree) root, beside the `task.md`
+that `init-task` writes; the global gitignore ignores them. Cloud mirroring, comment tools, HumanLayer session trailers, UI buttons, and automatic
+advancement are not part of this fork.
 
 ## Installation and updates
 

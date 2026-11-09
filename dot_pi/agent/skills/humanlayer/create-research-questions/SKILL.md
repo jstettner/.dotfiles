@@ -20,7 +20,7 @@ These questions will be used by another agent to research the codebase.
 
 1. **Read all @-mentioned files immediately and FULLY**:
 
-    - Ticket files (e.g., `.humanlayer/tasks/<task slug>/ticket.md` or `task.md`)
+    - Ticket files (e.g., `.local/tasks/<task>/ticket.md` or `.local/tasks/<task>/task.md`)
     - collateral files if explicitly mentioned
     - **DO NOT** read other artifacts unless requested.
     - Review these materials carefully before creating research questions
@@ -78,14 +78,11 @@ Follow this format, using an appropriate number of questions for the task (less 
 
 Populate the **Key Context Pointers** section with the links, repositories, libraries, dependencies, and filepaths you captured from the ticket in step 1. Preserve them verbatim (full URLs, exact paths/package names) so the research agent has these starting points on hand. Omit the section only if the ticket truly provides none.
 
-2. **Write the research questions** to `.humanlayer/tasks/TASKNAME/NN-research-questions-DESCRIPTION.md`
-   - First, check if a related task directory exists: `ls -La .humanlayer/tasks | grep -i "eng-XXXX"`
-   - If the directory doesn't exist, create: `.humanlayer/tasks/ENG-XXXX-description/`
+2. **Write the research questions** to `.local/tasks/<task>/NN-research-questions-DESCRIPTION.md`
+   - If the task directory doesn't exist, create it as runtime.md describes
    - Format: `NN-research-questions-DESCRIPTION.md` where NN is a zero-padded chronological index and DESCRIPTION is a 2-4 word kebab-case slug
-   - **Chronological indexing**: `ls -La` the task directory, find the highest existing NN- prefix, and use the next number. First document = `01-`, second = `02-`, etc.
-   - Directory naming:
-     - With ticket: `.humanlayer/tasks/ENG-1478-parent-child-tracking/01-research-questions-parent-child-tracking.md`
-     - Without ticket: `.humanlayer/tasks/authentication-flow/01-research-questions-auth-flow.md`
+   - **Chronological indexing**: `ls .local/tasks/<task>`, find the highest existing NN- prefix, and use the next number. First document = `01-`, second = `02-`, etc.
+   - Example: `.local/tasks/<task>/01-research-questions-auth-flow.md`
 
 3. **Read the final output template**
 

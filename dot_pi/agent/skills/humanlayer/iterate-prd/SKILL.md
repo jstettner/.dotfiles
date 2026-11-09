@@ -60,11 +60,9 @@ If the user asks to "continue working through questions" or "keep grilling" or s
 ## Steps
 
 1. **Find and read the task directory**:
-   - You should know the task directory, if not ask the user
-   - `ls -La .humanlayer/tasks/TASKNAME` to find all related documents in the task directory. Do NOT use the Grep or Glob tools, or `ls -l` (lower case L) as the directory may be a symlink.
+   - `ls -la .local/tasks/<task>` to find all related documents in the task directory
    - Read ALL files in the task directory, including the current PRD and prior artifacts (`ticket.md` or `task.md`, research, design discussion if present, mockups, etc.)
    - **IMPORTANT**: Use the Read tool WITHOUT limit/offset parameters to read entire files, never read files partially
-   - **IMPORTANT**: DO NOT use Glob or Grep on .humanlayer/tasks — it may be a symlink
 
 2. **If the user gives any input**:
    - DO NOT just accept the correction blindly
@@ -150,13 +148,13 @@ If the ticket says one thing but the PRD resolved it differently, follow the PRD
 Mockups are how you communicate visually. Use them liberally when discussing UI.
 
 **Creating mockups:**
-- Write HTML files to `.humanlayer/tasks/{task-slug}/mockup-{description}.html`
+- Write HTML files to `.local/tasks/<task>/mockup-{description}.html`
 - Check research for design system details (colors, fonts, components) - follow those patterns
 - Keep mockups focused on the decision at hand
 - Use realistic labels, not lorem ipsum
 
 **Displaying mockups inline:**
-[View HTML artifact](.humanlayer/tasks/{task-slug}/mockup-{description}.html)
+[View HTML artifact](.local/tasks/<task>/mockup-{description}.html)
 
 **Iterating:** Update mockups as decisions evolve. The final PRD should embed the "winning" versions.
 </guidance>

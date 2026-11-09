@@ -1,7 +1,7 @@
 ### Status
 
 - PR: [#{number} - {title}]({pr_url})
-- Description saved: [.humanlayer/tasks/{task-dir}/pr-description.md]({document_path})
+- Description saved: [.local/tasks/<task>/pr-description.md]({document_path})
 - Ticket: [{TICKET_ID}]({ticket_url}) (if applicable)
 
 ### Summary

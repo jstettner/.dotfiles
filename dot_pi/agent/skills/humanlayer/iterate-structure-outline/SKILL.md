@@ -12,7 +12,7 @@ You are iterating on an existing structure outline document based on user feedba
 
 ## Input
 
-- If only a directory is provided, or a directory is not provided, check the task's artifact directory from the user's request: `ls -La .humanlayer/tasks/<task slug>`. Do NOT use grep or glob or `ls` or `ls -l`, as the directory may be a symlink.
+- If no document is provided, check the task directory for the structure outline: `ls -la .local/tasks/<task>`.
 - Optionally, a ticket file path containing comments with feedback
 
 ## Initial Check
@@ -37,7 +37,7 @@ Then wait for the user's feedback before proceeding.
    - Review all design decisions and patterns to follow
 
 2. **Check for related task content**:
-   - If a path in `.humanlayer/tasks/TASKNAME` is mentioned, use `ls -La .humanlayer/tasks/TASKNAME`. Do NOT use `ls ` or `ls -l` as the directory may be a symlink.
+   - `ls -la .local/tasks/<task>`
    - Read all relevant files in the task directory, including the structure outline, design discussion, research documents, and ticket
    - Read relevant files mentioned in the task files
 
