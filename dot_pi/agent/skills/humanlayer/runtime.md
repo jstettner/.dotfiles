@@ -22,6 +22,8 @@ Follow the current repository's instructions (`AGENTS.md`, when present) and its
   Cmd-Shift-clicking the link in Rex, which can't resolve a path relative to the Markdown file. There is no cloud upload,
   artifact viewer, sidebar, comment tool, automatic permalink, or automatic workflow advancement.
   Never invent a cloud URL or promise these features.
+- After writing or updating the workflow's document, show it in the Rex pane to the right of the agent, reusing
+  the document pane already open: follow `~/.pi/agent/skills/show-me/references/open-document.md`.
 - Read required files completely, continuing with offsets if a tool truncates its output. Use Pi's `read`
   tool for file contents, `bash` for file operations, and `edit` for targeted document changes.
 
