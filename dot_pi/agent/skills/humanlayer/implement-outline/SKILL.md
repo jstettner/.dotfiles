@@ -36,6 +36,8 @@ For each phase in the structure outline:
 
 ### 1. Launch Implementer Agent
 
+First record the phase's starting commit (`phase-review.md`, "Before the phase").
+
 Use `subagent spawn --name implement-phase-N` with an outline-implementer role in the prompt to implement the current phase. Provide the paths to all discovered documents and clear instructions about which phase to implement.
 
 Example prompt:
@@ -58,7 +60,7 @@ IMPORTANT — keep your prompt short. The implementer agent will read the docume
 
 Before reporting, spawn a separate read-only reviewer with `--tools read,grep,find,ls` to check the diff against the repository instructions and applicable coding skills. Have the implementer fix the findings once; do not review the fixes again. Then run the repository's required typecheck, lint, and affected tests yourself.
 
-After review, fixes, and checks, summarize the phase:
+After review, fixes, and checks, follow `{SKILLBASE}/../phase-review.md`: commit the round, open its review in Plannotator, and name the review in the summary. Then summarize the phase:
 ```
 ## Phase [N] Complete
 
@@ -73,14 +75,14 @@ Ready for Phase [N+1] when you confirm, or let me know if anything needs adjustm
 
 ### 3. Wait for Human Confirmation
 
-Ask for the human to:
+Wait for the human's decision on the review (or in the chat):
 - Confirm manual checks passed
-- Report any issues found
-- Give permission to continue to the next phase
+- Report any issues found: fix them and start the next review round
+- Approve, to continue to the next phase
 
 ### 4. Commit the Changes
 
-- Create a new commit for the changes
+- On approval, squash the phase's review rounds into one commit, with the repository's hooks, as `phase-review.md` says
 - Do not commit `.local/tasks/`; confirm that local task artifacts are ignored.
 
 ### 5. Repeat for Next Phase
@@ -115,7 +117,7 @@ If instructed to implement multiple phases consecutively:
 
 ### Waiting for Input
 
-Unless expressly asked, don't commit or proceed to a next phase until the human has reviewed and approved the previous phase.
+Unless expressly asked, don't make the phase's commit (review rounds' `wip(review)` commits are part of the review) or proceed to a next phase until the human has reviewed and approved the previous phase.
 
 Workflow checklist:
 

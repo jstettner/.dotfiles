@@ -19,6 +19,7 @@ If you were provided with a path to a plan file, proceed with the plan.
 Otherwise, list the task directory with `ls -la .local/tasks/<task>` to locate the plan file inside of it.
 
 ### 1. Launch Implementer Agent
+First record the phase's starting commit (`phase-review.md`, "Before the phase").
 Use `subagent spawn --name implement-phase-N` with an implementer role in the prompt to implement the current phase. Provide clear instructions about which phase to implement.
 
 Example:
@@ -46,6 +47,7 @@ Run the repository's required typecheck, lint, and affected tests yourself, plus
 - Any other automated verification mentioned in the plan
 
 ### 4. Report to Human
+Follow `{SKILLBASE}/../phase-review.md`: commit the round, open its review in Plannotator, and name the review in the summary.
 Provide a clear summary of the phase completion:
 ```
 ## Phase [N] Implementation Summary
@@ -63,13 +65,13 @@ Ready to proceed to Phase [N+1] after manual verification, or let me know if any
 ```
 
 ### 5. Wait for Human Confirmation
-Wait for the human to:
+Wait for the human's decision on the review (or in the chat):
 - Confirm manual checks passed
-- Report any issues found
-- Give permission to continue to the next phase
+- Report any issues found: fix them and start the next review round
+- Approve, to continue to the next phase
 
 ### 6. Commit the changes
-- Create a new commit for the changes
+- On approval, squash the phase's review rounds into one commit, with the repository's hooks, as `phase-review.md` says
 - Do not commit `.local/tasks/`; confirm that local task artifacts are ignored.
 
 ### 7. Repeat for Next Phase
@@ -97,7 +99,7 @@ If instructed to implement multiple phases consecutively:
 - Only pause for human verification after the final phase
 
 ### Waiting for Input
-- unless expressly asked, don't commit or proceed to a next phase until the human has reviewed and approved the previous phase
+- unless expressly asked, don't make the phase's commit (review rounds' `wip(review)` commits are part of the review) or proceed to a next phase until the human has reviewed and approved the previous phase
 
 Workflow checklist:
 
