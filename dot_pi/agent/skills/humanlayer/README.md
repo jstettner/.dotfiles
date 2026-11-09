@@ -19,7 +19,9 @@ commands still work. For example:
 ```
 
 The PRD/TDD and iteration workflows are available under their original names too. The separately managed
-`~/.pi/agent/skills/show-me/` keeps the customized `/skill:show-me`; no second copy is installed here.
+`~/.pi/agent/skills/show-me/` keeps the customized `/skill:show-me`. Its
+`references/show-me.md` is the one visual guide: the workflows that draw (`create-design-discussion`,
+`create-structure-outline`, `describe-pr`) read it there, and keep no copy of their own.
 
 Each workflow reads [runtime.md](runtime.md) when invoked. It owns Pi-specific delegation instructions so those
 details do not need to live in always-loaded repository instructions. Research uses read-only Pi Subagent roles;

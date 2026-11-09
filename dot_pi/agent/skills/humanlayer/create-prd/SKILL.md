@@ -129,7 +129,7 @@ Mockups are how you communicate visually - use them liberally when discussing UI
 - Keep each mockup focused on the decision at hand
 
 Display inline:
-[View HTML artifact](.local/tasks/<task>/mockup-{description}.html)
+[View HTML artifact](file://<repo root>/.local/tasks/<task>/mockup-{description}.html)
 
 Update mockups as decisions evolve; the final PRD should embed the "winning" versions.
 </guidance>

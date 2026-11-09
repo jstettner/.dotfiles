@@ -154,7 +154,7 @@ Mockups are how you communicate visually. Use them liberally when discussing UI.
 - Use realistic labels, not lorem ipsum
 
 **Displaying mockups inline:**
-[View HTML artifact](.local/tasks/<task>/mockup-{description}.html)
+[View HTML artifact](file://<repo root>/.local/tasks/<task>/mockup-{description}.html)
 
 **Iterating:** Update mockups as decisions evolve. The final PRD should embed the "winning" versions.
 </guidance>

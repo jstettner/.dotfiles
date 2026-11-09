@@ -16,7 +16,10 @@ Follow the current repository's instructions (`AGENTS.md`, when present) and its
   workflow writes its first artifact, ask the user for a task name (lowercase kebab-case) and create
   `.local/tasks/<name>/`. Every artifact for the task goes directly in its directory.
 - `/.local/tasks/` is ignored by the global gitignore; never commit task artifacts.
-- Link to the actual local document or HTML file with ordinary Markdown links. There is no cloud upload,
+- Link to the actual local document or HTML file with ordinary Markdown links. Link an HTML artifact by its
+  absolute `file://` URL (`[View HTML artifact](file:///abs/path/to/repo/.local/tasks/<task>/mockup-x.html)`),
+  percent-encoding spaces, never by a relative path, whatever a workflow's example shows: the user previews it by
+  Cmd-Shift-clicking the link in Rex, which can't resolve a path relative to the Markdown file. There is no cloud upload,
   artifact viewer, sidebar, comment tool, automatic permalink, or automatic workflow advancement.
   Never invent a cloud URL or promise these features.
 - Read required files completely, continuing with offsets if a tool truncates its output. Use Pi's `read`

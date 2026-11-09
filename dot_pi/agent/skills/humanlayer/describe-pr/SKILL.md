@@ -27,7 +27,7 @@ Create or update the pull request for the current task with a concise descriptio
    - Read the ticket and any relevant task artifacts.
    - Read the complete PR diff and enough surrounding code to understand behavior and ownership.
    - Use `gh pr view` to collect PR metadata and changed files.
-   - Read `{SKILLBASE}/references/show-me.md` for the visual-outline conventions used in the PR body.
+   - Read `{SKILLBASE}/../../show-me/references/show-me.md` for the visual-outline conventions used in the PR body.
 
 4. Write the PR description using the template:
    - Keep **Why the change** to exactly one sentence.

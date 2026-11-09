@@ -150,7 +150,7 @@ Diagrams are how you communicate architecture visually. Use them liberally when 
 **Creating diagrams:**
 - Use mermaid syntax directly in markdown
 - Keep diagrams focused on the decision at hand
-- For diagrams or concepts too complex for Mermaid or plain text, get creative with a one-off HTML artifact linked using a local Markdown link
+- For diagrams or concepts too complex for Mermaid or plain text, get creative with a one-off HTML artifact linked by its absolute `file://` URL
 - Common diagram types:
   - `flowchart` for control flow and data flow
   - `sequenceDiagram` for component interactions
@@ -182,7 +182,7 @@ Use HTML artifacts when a concept is too complex for Mermaid or plain text, espe
 - Use realistic labels, not lorem ipsum
 
 **Displaying HTML artifacts inline:**
-[View HTML artifact](.local/tasks/<task>/diagram-{description}.html)
+[View HTML artifact](file://<repo root>/.local/tasks/<task>/diagram-{description}.html)
 </guidance>
 
 <guidance>

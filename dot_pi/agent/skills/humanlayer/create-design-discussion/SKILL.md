@@ -51,7 +51,7 @@ You are now in the Design Discussion phase. Based on the research findings and t
 
 `Read({SKILLBASE}/references/design_discussion_template.md)`
 
-`Read({SKILLBASE}/references/show-me.md)`
+`Read({SKILLBASE}/../../show-me/references/show-me.md)`
 
 - Follow the `show-me` guidance throughout the design discussion.
 - Use the smallest set of visual views needed to make the current state, proposed end state, and key design choices clear.

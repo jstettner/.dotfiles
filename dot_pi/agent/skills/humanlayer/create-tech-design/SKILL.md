@@ -151,7 +151,7 @@ If the codebase uses an ORM or a schema-definition library, the equivalent ORM-s
 When a concept is too complex for Mermaid or plain text - combining data flow, structure, annotations, or side-by-side comparisons - write a focused HTML artifact and display it inline:
 - Write to `.local/tasks/<task>/diagram-{description}.html`
 - Keep each artifact focused on the decision at hand; use realistic labels, not lorem ipsum
-[View HTML artifact](.local/tasks/<task>/diagram-{description}.html)
+[View HTML artifact](file://<repo root>/.local/tasks/<task>/diagram-{description}.html)
 
 **If you are writing an HTML artifact, read `{SKILLBASE}/references/artifact_template.html` and follow it.** Copy its `<style>` block and build your content in the body using its prose elements and utility classes (`.card`, `.badge*`, `.stat*`, `.ba`). The artifact must follow the template so it matches this application, not the codebase the TDD is about.
 </guidance>

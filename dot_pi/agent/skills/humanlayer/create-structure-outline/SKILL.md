@@ -39,7 +39,7 @@ You are creating a phased implementation plan based on research findings and des
    Wait for each Pi subagent's result with `subagent wait` before synthesizing findings.
 
 4. **Read the visual guidance, then create a phased implementation plan**:
-   - Before creating the outline, read `{SKILLBASE}/references/show-me.md`
+   - Before creating the outline, read `{SKILLBASE}/../../show-me/references/show-me.md`
    - Use the smallest set of visual views needed for each phase instead of a list of files and changes
    - Tell the story of each phase in the order that makes it easiest to understand; show files first when ownership gives the needed context, or establish key data structures, SQL tables, or API contracts first when they explain the rest of the change
    - Treat every visual view and subheading as optional. Choose and order them based on the change rather than a fixed template
