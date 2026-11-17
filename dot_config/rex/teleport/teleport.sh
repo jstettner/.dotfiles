@@ -9,6 +9,16 @@
 #   teleport.sh unpack REPO WORKTREE ID BRANCH BUNDLE  check out the bundle's snapshot at WORKTREE, both under ~
 #   teleport.sh panes PID...                           the pi sessions running as these PIDs
 #   teleport.sh dirs PATH...                           which of these directories exist
+#   teleport.sh drop PATH...                           remove these files from the cache
+#
+# A host whose transport is rex has no ssh, so files reach it through an rsync daemon there, which the Mac reaches
+# through a Rex port forward:
+#
+#   teleport.sh serve                                  on the host: start the daemon, serving ~ as the module home
+#   teleport.sh unserve DIR                            on the host: stop it
+#   teleport.sh forward REX LABEL SESSION PORT         on the Mac: forward a local port to the host's PORT, with
+#                                                      the daemon's secret on stdin
+#   teleport.sh unforward DIR                          on the Mac: stop the forward
 #
 # Output is KEY=VALUE lines, one value per line, for the Lua side to read.
 set -euo pipefail
@@ -192,9 +202,117 @@ cmd_dirs() {
   done
 }
 
-command="${1:?usage: teleport.sh hello|info|pack|unpack|panes|dirs ...}"
+cmd_drop() {
+  local path
+  for path in "$@"; do
+    case "$path" in
+      "$cache"/*) rm -f "$path" ;;
+      *) die "won't remove $path: it isn't in $cache" ;;
+    esac
+  done
+}
+
+# A daemon on 127.0.0.1 only, which only the forward reaches, and only with this teleport's secret. It stops itself
+# after a while in case the Mac never says so.
+cmd_serve() {
+  local dir secret port i
+  secret="$(od -An -tx1 -N16 /dev/urandom | tr -d ' \n')"
+  dir="$(mktemp -d "${TMPDIR:-/tmp}/rex-teleport.XXXXXX")"
+  (umask 077 && printf 'teleport:%s\n' "$secret" >"$dir/secrets")
+  cat >"$dir/rsyncd.conf" <<EOF
+pid file = $dir/pid
+[home]
+  path = $HOME
+  read only = false
+  use chroot = false
+  munge symlinks = false
+  list = false
+  auth users = teleport
+  secrets file = $dir/secrets
+  hosts allow = 127.0.0.1
+EOF
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    port=$((20000 + RANDOM % 40000))
+    rsync --daemon --address=127.0.0.1 --port="$port" --config="$dir/rsyncd.conf" --log-file="$dir/log" \
+      </dev/null >/dev/null 2>&1 || true
+    sleep 0.3
+    if [ -f "$dir/pid" ] && /usr/sbin/lsof -nP -a -p "$(cat "$dir/pid")" -iTCP@127.0.0.1:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
+      (sleep 7200 && cmd_unserve "$dir" watchdog) </dev/null >/dev/null 2>&1 &
+      echo $! >"$dir/watchdog"
+      echo "dir=$dir"
+      echo "port=$port"
+      echo "secret=$secret"
+      return
+    fi
+    [ ! -f "$dir/pid" ] || kill "$(cat "$dir/pid")" 2>/dev/null || true
+    rm -f "$dir/pid"
+  done
+  cat "$dir/log" >&2 2>/dev/null || true
+  rm -rf "$dir"
+  die "couldn't start an rsync daemon"
+}
+
+cmd_unserve() {
+  local dir="$1" by="${2:-}" watchdog=
+  case "$dir" in
+    "${TMPDIR:-/tmp}"/rex-teleport.*) ;;
+    *) die "$dir isn't a teleport daemon's folder" ;;
+  esac
+  [ ! -f "$dir/pid" ] || kill "$(cat "$dir/pid")" 2>/dev/null || true
+  [ ! -f "$dir/watchdog" ] || watchdog="$(cat "$dir/watchdog")"
+  rm -rf "$dir"
+  # The watchdog's sleep, and then the watchdog, unless it's the one stopping the daemon.
+  if [ -n "$watchdog" ] && [ "$by" != watchdog ]; then
+    pkill -P "$watchdog" 2>/dev/null || true
+    kill "$watchdog" 2>/dev/null || true
+  fi
+}
+
+cmd_forward() {
+  local rex="$1" label="$2" session="$3" port="$4" dir i listen
+  dir="$(mktemp -d "${TMPDIR:-/tmp}/rex-teleport.XXXXXX")"
+  (umask 077 && cat >"$dir/secret")
+  "$rex" -S "$label" -v forward new ${session:+-s "$session"} -L "127.0.0.1:0:127.0.0.1:$port" \
+    </dev/null >"$dir/log" 2>&1 &
+  echo $! >"$dir/pid"
+  for i in $(seq 1 100); do
+    listen="$(sed -n '/forwarding listen=/{s/.*forwarding listen=127\.0\.0\.1:\([0-9]*\) .*/\1/p;q;}' "$dir/log")"
+    if [ -n "$listen" ]; then
+      echo "dir=$dir"
+      echo "port=$listen"
+      return
+    fi
+    kill -0 "$(cat "$dir/pid")" 2>/dev/null || break
+    sleep 0.1
+  done
+  local log
+  log="$(cat "$dir/log")"
+  cmd_unforward "$dir"
+  die "couldn't forward a port to $label: $log"
+}
+
+# Interrupted, a forward closes its blocks on the host. Killed, it would leave them behind.
+cmd_unforward() {
+  local dir="$1" pid i
+  case "$dir" in
+    "${TMPDIR:-/tmp}"/rex-teleport.*) ;;
+    *) die "$dir isn't a teleport forward's folder" ;;
+  esac
+  if [ -f "$dir/pid" ]; then
+    pid="$(cat "$dir/pid")"
+    kill -INT "$pid" 2>/dev/null || true
+    for i in $(seq 1 30); do
+      kill -0 "$pid" 2>/dev/null || break
+      sleep 0.1
+    done
+    kill "$pid" 2>/dev/null || true
+  fi
+  rm -rf "$dir"
+}
+
+command="${1:?usage: teleport.sh hello|info|pack|unpack|panes|dirs|drop|serve|unserve|forward|unforward ...}"
 shift
 case "$command" in
-  hello | info | pack | unpack | panes | dirs) "cmd_$command" "$@" ;;
+  hello | info | pack | unpack | panes | dirs | drop | serve | unserve | forward | unforward) "cmd_$command" "$@" ;;
   *) die "teleport.sh: unknown command $command" ;;
 esac

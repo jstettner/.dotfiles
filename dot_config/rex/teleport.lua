@@ -5,7 +5,9 @@
 -- One end is always this Mac, and it drives both. teleport/teleport.sh does each machine's part: it bundles a
 -- snapshot of the worktree (HEAD, the index, and the working tree with untracked files), and the other end checks it
 -- out at the same place under ~, stashing or branching off anything there it would overwrite. Files move by rsync
--- over ssh, from this Mac, since a host can't reach it. Gitignored files travel only when the repo's carry list
+-- from this Mac, since a host can't reach it: over ssh, or, for a host whose transport is rex, to an rsync daemon on
+-- the host's 127.0.0.1 that a Rex port forward reaches, so the host needs no ssh. Gitignored files travel only when
+-- the repo's carry list
 -- names them. Each pi pane continues with `pi --fork` from a copy of its session file, which the pi extension
 -- (~/.pi/agent/extensions/teleport.ts) records.
 --
@@ -23,7 +25,8 @@ local unpack = table.unpack or unpack
 local shells = { zsh = true, bash = true, fish = true, sh = true, dash = true, nu = true }
 local ssh_opts = "ssh -o BatchMode=yes"
 
--- hosts: label -> { ssh = destination }, defaulting the destination to the label.
+-- hosts: label -> { ssh = destination }, defaulting the destination to the label; or label -> { transport = "rex" }
+-- to move files through Rex instead of ssh.
 -- repos: main checkout's path under ~ -> { carry = { gitignored paths }, setup = command run in the new worktree's
 -- root, in a shell pane (see pick_setup_pane) }.
 -- keep_local: leave this Mac's session open after teleporting it to a host.
@@ -96,7 +99,20 @@ local function api_of(label)
   }
 end
 
--- One end of a teleport: this Mac (label nil) or a host. path() names a file under ~ there for rsync.
+local function local_helper(...)
+  return parse(run({ "bash", helper, ... }))
+end
+
+local function call(s, method, args)
+  local res, err = s.api.call(method, args)
+  if not res then
+    error(s.name .. ": " .. method .. ": " .. tostring(err), 0)
+  end
+  return res
+end
+
+-- One end of a teleport: this Mac (label nil) or a host. path(rel) names a file under ~ there for rsync, and
+-- rsync_opts what rsync needs to reach it. close() undoes whatever reaching it set up.
 local function side(label)
   if not label then
     return {
@@ -105,21 +121,16 @@ local function side(label)
       path = function(rel)
         return home .. "/" .. rel
       end,
-      helper = function(...)
-        return parse(run({ "bash", helper, ... }))
-      end,
+      rsync_opts = {},
+      helper = local_helper,
+      close = function() end,
     }
   end
   local host = config.hosts[label] or error("no teleport host " .. label .. "; add it to hosts in init.lua", 0)
-  local ssh = host.ssh or label
   local api = api_of(label)
-  return {
+  local s = {
     name = label,
-    ssh = ssh,
     api = api,
-    path = function(rel)
-      return ssh .. ":" .. rel
-    end,
     helper = function(...)
       local argv = { ... }
       local res, err = api.call("client.action", {
@@ -131,19 +142,88 @@ local function side(label)
       end
       return parse(check(res.result, label .. ": teleport.sh " .. argv[1]))
     end,
+    close = function() end,
   }
-end
 
-local function rsync(from, to, opts)
-  return run({ "rsync", "-a", "-e", ssh_opts, from, to }, opts)
-end
-
-local function call(s, method, args)
-  local res, err = s.api.call(method, args)
-  if not res then
-    error(s.name .. ": " .. method .. ": " .. tostring(err), 0)
+  if host.transport ~= "rex" then
+    local ssh = host.ssh or label
+    s.rsync_opts = { "-e", ssh_opts }
+    s.path = function(rel)
+      return ssh .. ":" .. rel
+    end
+    return s
   end
-  return res
+
+  -- The daemon and the forward start with the first file, and stop when the teleport ends. The forward's tunnel
+  -- block needs a session on the host: the one being teleported when there is one (s.session), else any, else one
+  -- made for it.
+  local link
+  local function open()
+    if link then
+      return link
+    end
+    link = {}
+    local session = s.session
+    if not session then
+      local list = call(s, "session.list", {})
+      if list.sessions and list.sessions[1] then
+        session = list.sessions[1].session_id
+      else
+        session = call(s, "session.create", { label = "teleport" }).session_id
+        link.made_session = session
+      end
+    end
+    local served = s.helper("serve")
+    link.served = served.dir
+    local res, err = rex.exec(
+      { "bash", helper, "forward", rex_bin, label, session, served.port },
+      { stdin = served.secret .. "\n" }
+    )
+    if not res then
+      error("teleport.sh forward: " .. err, 0)
+    end
+    local forward = parse(check(res, "teleport.sh forward"))
+    link.forward = forward.dir
+    link.url = "rsync://teleport@127.0.0.1:" .. forward.port .. "/home/"
+    s.rsync_opts = { "--password-file=" .. forward.dir .. "/secret" }
+    return link
+  end
+  s.path = function(rel)
+    return open().url .. rel
+  end
+  s.rsync_opts = {}
+  s.close = function()
+    if not link then
+      return
+    end
+    if link.forward then
+      pcall(local_helper, "unforward", link.forward)
+    end
+    if link.served then
+      pcall(s.helper, "unserve", link.served)
+    end
+    if link.made_session then
+      s.api.call("session.destroy", { session_id = link.made_session })
+    end
+    link = nil
+  end
+  return s
+end
+
+-- Copies rel under ~ on from to into (a folder, or a file's new path) under ~ on to. One of them is this Mac.
+local function rsync(from, rel, to, into)
+  local argv = { "rsync", "-a" }
+  -- path() first: for a rex host, it's what sets rsync_opts.
+  local src, dst = from.path(rel), to.path(into)
+  for _, opt in ipairs(from.rsync_opts) do
+    table.insert(argv, opt)
+  end
+  for _, opt in ipairs(to.rsync_opts) do
+    table.insert(argv, opt)
+  end
+  table.insert(argv, src)
+  table.insert(argv, dst)
+  return run(argv)
 end
 
 -- What each tiled terminal is running and where, from its foreground process. Floating panes, such as the pop-down,
@@ -327,6 +407,8 @@ local function open_picker(from, session_id, block_id)
   })
 end
 
+local move
+
 local function teleport(ctx, args)
   local from = args.from or ctx.server
   if from == "local" then
@@ -364,6 +446,18 @@ local function teleport(ctx, args)
   end
 
   local src, dst = side(from), side(to)
+  src.session = session_id
+  local ok, result = pcall(move, ctx, args, from, to, src, dst, session_id, block_id)
+  src.close()
+  dst.close()
+  if not ok then
+    error(result, 0)
+  end
+  return result
+end
+
+-- The teleport itself, once teleport has settled where from and to.
+move = function(ctx, args, from, to, src, dst, session_id, block_id)
   local view = call(src, "session.view", { session_id = session_id })
   local panes = inspect_panes(src, session_id, view)
   local base = panes[block_id]
@@ -392,12 +486,8 @@ local function teleport(ctx, args)
   local bundle = cache .. id .. ".bundle"
 
   local packed = src.helper("pack", info.top, id, from_home .. "/" .. bundle, unpack(repo.carry or {}))
-  rsync(src.path(bundle), dst.path(bundle))
-  if src.ssh then
-    run({ "ssh", "-o", "BatchMode=yes", src.ssh, "rm -f " .. quote(bundle) })
-  else
-    os.remove(home .. "/" .. bundle)
-  end
+  rsync(src, bundle, dst, bundle)
+  src.helper("drop", from_home .. "/" .. bundle)
   local unpacked = dst.helper("unpack", info.repo, info.worktree, id, info.branch, to_home .. "/" .. bundle)
   local worktree = to_home .. "/" .. info.worktree
 
@@ -406,7 +496,7 @@ local function teleport(ctx, args)
     path = path:gsub("/+$", "")
     local parent = path:match("^(.*)/[^/]+$")
     local into = info.worktree .. "/" .. (parent and parent .. "/" or "")
-    rsync(src.path(info.worktree .. "/" .. path), dst.path(into))
+    rsync(src, info.worktree .. "/" .. path, dst, into)
   end
 
   -- Where each pane opens, falling back to the worktree when its folder isn't on the other machine.
@@ -435,7 +525,11 @@ local function teleport(ctx, args)
     elseif pane.pi then
       n = n + 1
       local copy = cache .. id .. "-" .. n .. ".jsonl"
-      rsync(src.ssh and (src.ssh .. ":" .. pane.pi.file) or pane.pi.file, dst.path(copy))
+      local file = pane.pi.file
+      if file:sub(1, #from_home + 1) ~= from_home .. "/" then
+        error("a pi's session file, " .. file .. ", is outside your home folder", 0)
+      end
+      rsync(src, file:sub(#from_home + 2), dst, copy)
       table.insert(input, "pi --fork " .. quote(to_home .. "/" .. copy))
     end
     pane.options = { cwd = exists[pane.target] and pane.target or worktree }
@@ -489,16 +583,22 @@ local function teleport(ctx, args)
     })
   end
 
-  -- The app that asked follows to the new session. With follow, so does every app attached to the old one, which
-  -- is every app connected to its server, so /teleport, run from the pane someone is looking at, passes it.
-  if ctx.origin == "key" or ctx.origin == "palette" then
-    pcall(rex.client.queue, "session.select", { session_id = new_session })
-  end
-  if args.follow then
-    local clients = src.api.call("session.list_clients", { session_id = session_id })
-    for _, client in ipairs(clients and clients.clients or {}) do
-      if client.info and client.info.kind == "app" then
-        src.api.call("client.perform", {
+  -- The apps attached to the old session follow to the new one, asked from dst: an app's connection to src can't
+  -- go to a session src doesn't have. An app connects to each server as its own client, so it's found on dst by its
+  -- label. With follow, that's every app attached to the old session, which is every app connected to its server,
+  -- so /teleport, run from the pane someone is looking at, passes it; from a key or the palette, the same.
+  if args.follow or ctx.origin == "key" or ctx.origin == "palette" then
+    local labels = {}
+    local attached = src.api.call("session.list_clients", { session_id = session_id })
+    for _, client in ipairs(attached and attached.clients or {}) do
+      if client.info and client.info.kind == "app" and client.info.label then
+        labels[client.info.label] = true
+      end
+    end
+    local there = dst.api.call("client.list", {})
+    for _, client in ipairs(there and there.clients or {}) do
+      if client.info and client.info.kind == "app" and labels[client.info.label] then
+        dst.api.call("client.perform", {
           client_id = client.client_id,
           action = "session.select",
           args = { session_id = new_session },
