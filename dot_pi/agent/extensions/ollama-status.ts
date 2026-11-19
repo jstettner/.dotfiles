@@ -1,11 +1,16 @@
 /**
- * ollama-status: when the session's current model is an Ollama model, show where
- * it's running (the PROCESSOR column of `ollama ps`) in the footer status line.
- * Warns when any of it has spilled onto the CPU. Shows nothing for other models.
+ * ollama-status: when the session's current model is a local one, show the state of its server in the
+ * footer status line. Shows nothing for other models.
+ *
+ * - Ollama: where the model is running (the PROCESSOR column of `ollama ps`), warning when any of it has
+ *   spilled onto the CPU.
+ * - llama-server (`llama-local`): how many of its slots are busy, warning when all are, since the next
+ *   request then takes over another session's slot and its KV cache.
  */
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
-const PROVIDER = "ollama"; // provider key in ~/.pi/agent/models.json
+const OLLAMA = "ollama"; // provider keys in ~/.pi/agent/models.json
+const LLAMA = "llama-local";
 const STATUS_KEY = "ollama";
 const POLL_MS = 5000;
 const EXEC_TIMEOUT_MS = 4000;
@@ -26,6 +31,34 @@ function processorFor(stdout: string, modelId: string): string | undefined {
   return undefined;
 }
 
+interface Slot {
+  is_processing?: boolean;
+}
+
+/** Polls llama-server's `/slots`, next to the `/v1` the model's baseUrl names. */
+async function llamaStatus(model: Model, theme: ExtensionContext["ui"]["theme"]): Promise<string> {
+  const base = (model.baseUrl ?? "http://127.0.0.1:9931/v1").replace(/\/v1\/?$/, "");
+  try {
+    const response = await fetch(`${base}/slots`, { signal: AbortSignal.timeout(EXEC_TIMEOUT_MS) });
+    if (!response.ok) return theme.fg("error", `llama: HTTP ${response.status}`);
+    const slots = (await response.json()) as Slot[];
+    const busy = slots.filter((slot) => slot.is_processing).length;
+    const text = `llama: ${busy}/${slots.length} slots`;
+    return theme.fg(busy >= slots.length ? "warning" : "success", text);
+  } catch {
+    return theme.fg("error", "llama: unreachable");
+  }
+}
+
+async function ollamaStatus(pi: ExtensionAPI, model: Model, theme: ExtensionContext["ui"]["theme"]): Promise<string> {
+  const result = await pi.exec("ollama", ["ps"], { timeout: EXEC_TIMEOUT_MS });
+  if (result.code !== 0 || result.killed) return theme.fg("error", "ollama: unreachable");
+  const processor = processorFor(result.stdout, model.id);
+  if (processor === undefined) return theme.fg("dim", "ollama: not loaded");
+  if (/CPU/i.test(processor)) return theme.fg("warning", `ollama: ${processor}`);
+  return theme.fg("success", `ollama: ${processor}`);
+}
+
 export default function (pi: ExtensionAPI) {
   let ctx: ExtensionContext | undefined;
   let model: Model | undefined;
@@ -42,25 +75,16 @@ export default function (pi: ExtensionAPI) {
   const poll = async (gen: number): Promise<void> => {
     if (!ctx || !model) return;
     const { theme } = ctx.ui;
-    const result = await pi.exec("ollama", ["ps"], { timeout: EXEC_TIMEOUT_MS });
-    if (gen !== generation) return;
-
-    let text: string;
-    if (result.code !== 0 || result.killed) {
-      text = theme.fg("error", "ollama: unreachable");
-    } else {
-      const processor = processorFor(result.stdout, model.id);
-      if (processor === undefined) text = theme.fg("dim", "ollama: not loaded");
-      else if (/CPU/i.test(processor)) text = theme.fg("warning", `ollama: ${processor}`);
-      else text = theme.fg("success", `ollama: ${processor}`);
-    }
+    const text =
+      model.provider === LLAMA ? await llamaStatus(model, theme) : await ollamaStatus(pi, model, theme);
+    if (gen !== generation || !ctx) return;
     ctx.ui.setStatus(STATUS_KEY, text);
     timer = setTimeout(() => void poll(gen), POLL_MS);
   };
 
   const track = (next: Model | undefined): void => {
     stop();
-    model = next?.provider === PROVIDER ? next : undefined;
+    model = next?.provider === OLLAMA || next?.provider === LLAMA ? next : undefined;
     if (ctx?.mode === "tui" && model) void poll(generation);
   };
 
@@ -69,7 +93,7 @@ export default function (pi: ExtensionAPI) {
     track(c.model);
   });
   pi.on("model_select", (event) => track(event.model));
-  // Ollama loads the model on the first request, so refresh right after a turn instead of waiting.
+  // Ollama loads the model on the first request, and slots free as turns end, so refresh right after one.
   pi.on("agent_settled", () => track(model));
   pi.on("session_shutdown", () => {
     stop();
