@@ -6,13 +6,15 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin init --apply --source ~/
 
 ## Capturing changes
 
-`chezmoi re-add` captures configuration changed on this machine. Its `re-add.post`
-hook (in `.chezmoi.toml.tmpl`) runs `scripts/capture.sh`, which also snapshots what
-re-add skips: the `modify_` files' managed values, new files in our own config
-folders, and the Herdr plugin list. The hook does nothing on `--dry-run`. Review the
-Git diff before committing. Running `bash scripts/capture.sh` directly does the same.
-On a machine set up before the hook existed, run `chezmoi init` once to add it to
-the chezmoi config.
+`bash scripts/capture.sh` captures configuration changed on this machine. It re-adds
+every tracked file (as `chezmoi re-add` would, except templates) and also snapshots
+what re-add skips: the `modify_` files' managed values, new files in our own config
+folders, and the Herdr plugin list. Review the Git diff before committing.
+
+It is not a `re-add.post` hook: chezmoi runs post hooks while it still holds its
+persistent-state lock, so the script's own `chezmoi` calls would time out whenever
+re-add changed something. On a machine whose chezmoi config still has that hook,
+run `chezmoi init` once to remove it.
 
 ## Zsh
 
@@ -34,7 +36,7 @@ it would replace the modifier with a full-file snapshot.
 
 Chezmoi tracks `~/.config/zed/settings.json` and `~/.config/zed/keymap.json`.
 Prompts, themes, and runtime state are not captured. After changing settings or
-bindings in Zed, run `chezmoi re-add` and review the Git diff before committing.
+bindings in Zed, run `bash scripts/capture.sh` and review the Git diff before committing.
 Run `chezmoi apply` to deploy the tracked config.
 
 ## Neovim
@@ -178,7 +180,7 @@ machine-local settings are preserved. History, the local API's credentials and t
 downloaded models are never tracked. On a new machine, launch Hex once so it writes
 its settings, then run `chezmoi apply`.
 
-After editing replacements in Hex, run `chezmoi re-add` and review the Git diff.
+After editing replacements in Hex, run `bash scripts/capture.sh` and review the Git diff.
 Quit Hex before `chezmoi apply`, or it may overwrite the applied settings with the
 ones it holds in memory.
 
