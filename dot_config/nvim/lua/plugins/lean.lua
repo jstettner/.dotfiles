@@ -2,13 +2,13 @@ return {
   {
     "Julian/lean.nvim",
     event = { "BufReadPre *.lean", "BufNewFile *.lean" },
-    dependencies = {
-      "neovim/nvim-lspconfig",
-      "nvim-lua/plenary.nvim",
-    },
-    opts = {
-      -- Default keymaps (<LocalLeader>i toggles the infoview, etc.).
-      mappings = true,
-    },
+    -- lean.nvim has no setup(); it reads vim.g.lean_config on load.
+    init = function()
+      ---@type lean.Config
+      vim.g.lean_config = {
+        -- Default keymaps (<LocalLeader>i toggles the infoview, etc.).
+        mappings = true,
+      }
+    end,
   },
 }
