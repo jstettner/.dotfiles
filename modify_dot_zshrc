@@ -124,7 +124,7 @@ NEOREX = '''# Use the Rex-native frontend interactively, without replacing nvim 
 # Build ~/src/neorex with `zig build`, or install neorex on PATH.
 function nvim {
   local frontend="${commands[neorex]:-$HOME/src/neorex/zig-out/bin/neorex}"
-  if [[ -n "$REX_SERVER" && -n "$REX_SESSION" && -x "$frontend" ]]; then
+  if [[ -n "$REX_SERVER" && -n "$REX_BLOCK" && -x "$frontend" ]]; then
     case "$1" in
       --version|-v|--headless|--embed|--api-info|-h|--help)
         command nvim "$@" ;;
