@@ -60,7 +60,7 @@ IMPORTANT — keep your prompt short. The implementer agent will read the docume
 
 Before reporting, spawn a separate read-only reviewer with `--tools read,grep,find,ls` to check the diff against the repository instructions and applicable coding skills. Have the implementer fix the findings once; do not review the fixes again. Then run the repository's required typecheck, lint, and affected tests yourself.
 
-After review, fixes, and checks, follow `{SKILLBASE}/../phase-review.md`: commit the round, open its review in Plannotator, and name the review in the summary. Then summarize the phase:
+After review, fixes, and checks, follow `{SKILLBASE}/../phase-review.md`: commit the round, open its review in leaf, and say what it compares against in the summary. Then summarize the phase:
 ```
 ## Phase [N] Complete
 

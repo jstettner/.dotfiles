@@ -55,8 +55,7 @@ Write your comment in the floating Markdown buffer, using normal Vim editing:
   Pi processes open the usual floating picker; other tabs and shells are excluded.
 
 Feedback includes the source path, line range, selected text and comment. The
-bridge pastes one message into the chosen Pi input and presses Enter, like the
-existing Rex annotation launcher. Leave the target's input empty. A successful
+bridge pastes one message into the chosen Pi input and presses Enter. Leave the target's input empty. A successful
 dispatch means the terminal accepted the input, not an acknowledgment from Pi.
 
 Failures and picker cancellation retain the draft in this Neovim process:
@@ -158,14 +157,37 @@ nvim --headless -i NONE '+luafile scripts/test_nvim_diff_colors.lua' '+qa!'
 
 ## Rex
 
-`Cmd+O` opens plannotator-tui; `Cmd+Shift+O` reviews the agent's last message.
-Reviews open in a centered floating pane (80% of the tab), without changing the
-tiled layout. This requires Rex's `session.new_layer` API. Explicit
-`--placement split` still opens beside the agent.
+The managed config is `dotfiles.lua`. `init.lua` is a modify script that only
+loads it and keeps the block `leaf rex install` adds there (leaf rewrites that
+block itself, for example on `leaf ui toggle`).
 
-For remote panes, the action is forwarded to the owning Rex server so transcript
-lookup and review both run there, not on the local Mac. Install this Rex config and
-plannotator-tui on each server used for reviews.
+### Reviews in leaf
+
+leaf reviews diffs and plans in the terminal and sends one
+verdict (approved, approved with notes, changes requested, with numbered notes) to
+the agent pane as its next message. `~/.local/bin/leaf-float` opens leaf in a centered
+floating pane (80% of the tab) instead of leaf's own split, using Rex's
+`session.new_layer` API:
+
+```sh
+leaf-float review                        # working tree, verdict to $REX_BLOCK
+leaf-float review --range "$base..HEAD"   # committed work only
+leaf-float plan plan.md                  # plan review, block by block
+leaf-float --reply-to BLOCK review       # verdict to another pane
+leaf-float close                         # close this agent's floating pane
+```
+
+Each agent pane has one floating leaf pane: opening another closes the earlier one
+(leaf keeps unsent notes as drafts). `Cmd+O` reviews the focused agent's working
+tree, `Cmd+Shift+O` its branch against its base. For remote panes the action is
+forwarded to the owning Rex server, so this config, `leaf-float` and leaf must be
+installed there too.
+
+`chezmoi apply` installs leaf's `leaf`, `leaf-plan` and `leaf-review` skills into
+`~/.agents/skills` (Pi) and `~/.claude/skills` (Claude Code), with a note to use
+`leaf-float` in Rex, and reinstalls them when leaf's version changes. It doesn't run
+`leaf agent setup`, whose plan hooks and blocking Pi tools we don't use. The
+HumanLayer implement skills review each phase this way (`phase-review.md`).
 
 Apply changes with `chezmoi apply ~/.config/rex`, then `rex config reload`.
 

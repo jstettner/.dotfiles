@@ -47,7 +47,7 @@ Run the repository's required typecheck, lint, and affected tests yourself, plus
 - Any other automated verification mentioned in the plan
 
 ### 4. Report to Human
-Follow `{SKILLBASE}/../phase-review.md`: commit the round, open its review in Plannotator, and name the review in the summary.
+Follow `{SKILLBASE}/../phase-review.md`: commit the round, open its review in leaf, and say what it compares against in the summary.
 Provide a clear summary of the phase completion:
 ```
 ## Phase [N] Implementation Summary

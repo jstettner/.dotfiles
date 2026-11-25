@@ -1,0 +1,161 @@
+#!/usr/bin/env python3
+"""Open leaf in a floating Rex pane over the agent's tab instead of a split beside it.
+
+  leaf-float [--reply-to BLOCK] [--cwd DIR] [--keep] review|plan|diff|open [leaf args...]
+  leaf-float [--reply-to BLOCK] close
+
+`review` and `plan` send their verdict to the agent pane (--reply-to, default $REX_BLOCK),
+where it arrives as the agent's next message. Each agent pane has at most one floating
+leaf pane: opening another closes the earlier one first (leaf keeps its unsent notes as
+drafts), unless --keep. `close` closes it. Prints what it opened and returns at once.
+
+Outside Rex (no --reply-to and no $REX_BLOCK) this runs `leaf` itself, which falls back
+to tmux, Herdr, or telling the person what to run.
+"""
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+
+BOUNDS = [0.1, 0.1, 0.8, 0.8]
+SHELL = "com.superlogical.terminal.shell"
+REPLIES = {"review", "plan"}
+STATE = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state"), "leaf-float")
+
+
+def fail(message):
+    print(f"leaf-float: {message}", file=sys.stderr)
+    sys.exit(1)
+
+
+def find(name, *candidates):
+    for path in candidates:
+        if path and os.path.isfile(path) and os.access(path, os.X_OK):
+            return path
+    return shutil.which(name)
+
+
+# Rex actions may run this with a bare PATH, so also look where Rex installs its CLI.
+REX = find(
+    "rex",
+    os.path.join(os.environ.get("REX_BIN_DIR", ""), "rex"),
+    os.path.expanduser(
+        "~/Library/Application Support/com.superlogical.rex/RexServer/Versions/Current/Rex Server.app/Contents/MacOS/rex"
+    ),
+    "/Applications/Rex.app/Contents/Helpers/Rex Server.rex/Contents/MacOS/rex",
+) or shutil.which("rex", path=os.path.expanduser("~/.local/bin"))
+LEAF = find("leaf", os.path.expanduser("~/.local/bin/leaf"), os.path.expanduser("~/.cargo/bin/leaf"))
+
+
+def rex(*args, input=None, check=True):
+    result = subprocess.run([REX, *args], capture_output=True, text=True, input=input)
+    if check and result.returncode != 0:
+        fail(f"rex {' '.join(args[:3])}: {result.stderr.strip() or result.stdout.strip()}")
+    return result
+
+
+def state_file(agent):
+    return os.path.join(STATE, re.sub(r"[^\w.-]", "_", agent) + ".json")
+
+
+def close_previous(agent):
+    """Close the floating leaf pane last opened for this agent, if it's still open."""
+    path = state_file(agent)
+    try:
+        with open(path) as f:
+            previous = json.load(f)
+    except (OSError, ValueError):
+        return None
+    # Fails harmlessly when the person already closed it or leaf exited.
+    rex("api", "call", "session.close_layer", "-", input=json.dumps(previous), check=False)
+    os.remove(path)
+    return previous.get("layer_id")
+
+
+def block_cwd(block):
+    result = rex("block", "call", "-b", block, "process", check=False)
+    try:
+        return (json.loads(result.stdout).get("foreground") or {}).get("cwd")
+    except ValueError:
+        return None
+
+
+def main(argv):
+    reply_to = cwd = None
+    keep = False
+    while argv and argv[0].startswith("--"):
+        flag = argv.pop(0)
+        if flag == "--keep":
+            keep = True
+        elif flag in ("--reply-to", "--cwd") and argv:
+            value = argv.pop(0)
+            if flag == "--reply-to":
+                reply_to = value
+            else:
+                cwd = value
+        elif flag in ("-h", "--help"):
+            print(__doc__.strip())
+            return
+        else:
+            fail(f"unknown option {flag}")
+    if not argv or argv[0] in ("-h", "help"):
+        print(__doc__.strip())
+        return
+    sub, rest = argv[0], argv[1:]
+
+    agent = reply_to or os.environ.get("REX_BLOCK")
+    if not agent or not REX:
+        if sub == "close":
+            return
+        if not LEAF:
+            fail("leaf isn't installed (cargo install leaf-reader)")
+        os.execv(LEAF, [LEAF, sub, *rest])
+
+    if sub == "close":
+        closed = close_previous(agent)
+        print(f"Closed {closed}." if closed else "No floating leaf pane was open.")
+        return
+    if not LEAF:
+        fail("leaf isn't installed here (cargo install leaf-reader)")
+
+    target = json.loads(rex("block", "inspect", agent, "--json").stdout)
+    window = target["block"].get("window_id")
+    if not window:
+        fail(f"{agent} is not in a tab")
+    session = target["session_id"]
+    if cwd is None:
+        cwd = os.getcwd() if not reply_to else (block_cwd(agent) or os.getcwd())
+
+    command = [LEAF, sub, *rest]
+    if sub in REPLIES:
+        command[2:2] = ["--reply-to", agent]
+    if not keep:
+        close_previous(agent)
+    created = json.loads(rex("api", "call", "session.new_layer", "-", input=json.dumps({
+        "session_id": session,
+        "window_id": window,
+        "bounds": BOUNDS,
+        "focus": True,
+        "layout": {"block": {
+            "flavor": SHELL,
+            "label": f"leaf {sub}",
+            "options": {"shell": "none", "cwd": cwd, "command": command},
+        }},
+    })).stdout)
+    layer = created["layer_id"]
+    os.makedirs(STATE, exist_ok=True)
+    with open(state_file(agent), "w") as f:
+        json.dump({"session_id": session, "layer_id": layer}, f)
+
+    shown = " ".join([sub, *rest])
+    if sub in REPLIES:
+        print(f"Opened `leaf {shown}` in a floating pane ({layer}). "
+              "End your turn: the verdict arrives as your next message, headed `# Review of …`.")
+    else:
+        print(f"Opened `leaf {shown}` in a floating pane ({layer}).")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

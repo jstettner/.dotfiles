@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# chezmoi runs this after apply whenever this script or the installed leaf changes:
+{{- $leaf := "" }}
+{{- range list (joinPath .chezmoi.homeDir ".local/bin/leaf") (joinPath .chezmoi.homeDir ".cargo/bin/leaf") }}
+{{-   if and (not $leaf) (stat .) }}{{ $leaf = . }}{{ end }}
+{{- end }}
+# leaf: {{ if $leaf }}{{ output $leaf "version" | trim }}{{ else }}not installed{{ end }}
+#
+# Installs leaf's agent skills (leaf, leaf-plan, leaf-review) for Pi (~/.agents/skills) and
+# Claude Code (~/.claude/skills), each with a note to float its pane with leaf-float in Rex.
+# Not `leaf agent setup`: that also adds plan hooks and a blocking Pi extension, which we skip.
+# On macOS it also runs `leaf rex install` once; modify_init.lua keeps the block it adds.
+{{ template "path.sh" . }}
+export PATH="$HOME/.cargo/bin:$PATH"
+set -euo pipefail
+
+if ! command -v leaf >/dev/null 2>&1; then
+  printf 'leaf is not installed; skipping its skills. Install it, then chezmoi apply again.\n' >&2
+  exit 0
+fi
+
+float_note() {
+  case "$1" in
+    leaf) cat <<'EOF'
+
+## Floating panes in Rex (this machine's setup)
+
+When `$REX_BLOCK` is set and `leaf-float` is on `PATH`, open screens over this tab rather than in a split:
+`leaf-float open notes.md`, `leaf-float diff --branch`, `leaf-float review …`, `leaf-float plan plan.md`. It takes
+leaf's arguments, returns at once, and replaces the floating pane it opened before. `leaf-float close` closes it.
+EOF
+      ;;
+    leaf-plan | leaf-review)
+      local sub=${1#leaf-}
+      cat <<EOF
+
+## In Rex: float it (this machine's setup)
+
+When \`\$REX_BLOCK\` is set and \`leaf-float\` is on \`PATH\`, run \`leaf-float $sub …\` instead of \`leaf $sub …\`, with
+the same arguments. It opens the review in a floating pane over this tab instead of a split, and closes the one from
+an earlier round first (leaf keeps the person's unsent notes). Everything else above is the same: end your turn and
+the verdict arrives as your next message. Run \`leaf-float close\` once the review is settled and its pane is still
+open.
+EOF
+      ;;
+  esac
+}
+
+for name in leaf leaf-plan leaf-review; do
+  for root in "$HOME/.agents/skills" "$HOME/.claude/skills"; do
+    mkdir -p "$root/$name"
+    tmp=$(mktemp "$root/$name/.SKILL.md.XXXXXX")
+    { leaf agent skill "$name"; float_note "$name"; } > "$tmp"
+    mv "$tmp" "$root/$name/SKILL.md"
+  done
+done
+printf 'leaf skills installed for Pi and Claude Code. Run /reload in open Pi sessions.\n'
+{{- if eq .chezmoi.os "darwin" }}
+
+if [ ! -f "$HOME/.config/rex/plugins/leaf/init.lua" ] && command -v rex >/dev/null 2>&1; then
+  leaf rex install
+fi
+{{- end }}
