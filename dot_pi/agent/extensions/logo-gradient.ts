@@ -1,7 +1,8 @@
 /**
  * Recolors the π logo in Pi's startup header with the pink → cyan gradient from
- * pi-powerline-footer's welcome screen, and continues that gradient down the
- * loaded-resource section headers ([Context], [Skills], [Prompts], [Extensions]).
+ * pi-powerline-footer's welcome screen, and gives the loaded-resource section headers
+ * ([Context], [Skills], [Prompts], [Extensions]) one solid logo color each, stepping
+ * from pink at the top to cyan at the bottom.
  *
  * Pi has no hook for these colors, so this installs a header that wraps the
  * built-in one: everything (version, key hints, Ctrl+O expansion, the logo-click
@@ -15,7 +16,6 @@ import type { Component, TuiMouseEvent, TuiMouseEventResult } from "@earendil-wo
 import {
 	backgroundAnsi,
 	foregroundAnsi,
-	mixColors,
 	parseColor,
 	sliceByColumn,
 	stripTerminalSequences,
@@ -23,10 +23,9 @@ import {
 
 type Theme = ExtensionContext["ui"]["theme"];
 
-// pi-powerline-footer's GRADIENT_COLORS (256-color indices).
+// pi-powerline-footer's GRADIENT_COLORS (256-color indices). The logo and the section headers use these exact
+// indices, never blends, so both get the terminal theme's rendering of the same palette entries.
 const GRADIENT = [199, 171, 135, 99, 75, 51];
-// The section headers use only this part of it: trimming the hot-pink and pure-cyan ends softens the sweep.
-const SECTION_RANGE = [0.2, 0.8] as const;
 
 // Pi's logo as square pixels (4 wide, 4 tall), drawn two rows per line with half blocks.
 const PIXELS = ["███ ", "█ █ ", "██ █", "█  █"];
@@ -47,31 +46,18 @@ const WRAPPED = Symbol("logo-gradient");
 const SECTIONS_PATCHED = Symbol("logo-gradient-sections");
 const SECTION_HEADER = /^(\s*)\[(Context|Skills|Prompts|Extensions)\]\s*$/;
 
-/** Section-header color at `t` in [0, 1] (mapped onto SECTION_RANGE), blended smoothly between the stops. */
-function gradientAt(theme: Theme, t: number): string {
-	const [start, end] = SECTION_RANGE;
-	const u = start + Math.min(1, Math.max(0, t)) * (end - start);
-	const scaled = u * (GRADIENT.length - 1);
-	const i = Math.min(GRADIENT.length - 2, Math.floor(scaled));
-	const color = mixColors(parseColor(GRADIENT[i]), parseColor(GRADIENT[i + 1]), scaled - i, "oklch");
-	return foregroundAnsi(color, theme.getColorMode());
-}
-
-/** Section headers run down the gradient; each one blends across its own slice of it. */
+/** Each section header is one solid logo color, spread evenly from the palette's first stop to its last. */
 function recolorSections(theme: Theme, lines: string[]): string[] {
 	const headers: number[] = [];
 	lines.forEach((line, i) => {
 		if (SECTION_HEADER.test(stripTerminalSequences(line))) headers.push(i);
 	});
+	const last = GRADIENT.length - 1;
 	headers.forEach((lineIdx, k) => {
 		const [, indent, name] = SECTION_HEADER.exec(stripTerminalSequences(lines[lineIdx]))!;
-		const label = `[${name}]`;
-		const span = 1 / headers.length;
-		let out = indent;
-		for (let j = 0; j < label.length; j++) {
-			out += `${gradientAt(theme, (k + j / label.length) * span)}${label[j]}`;
-		}
-		lines[lineIdx] = `${out}${RESET}`;
+		const stop = headers.length === 1 ? 0 : Math.round((k / (headers.length - 1)) * last);
+		const color = foregroundAnsi(parseColor(GRADIENT[stop]), theme.getColorMode());
+		lines[lineIdx] = `${indent}${color}[${name}]${RESET}`;
 	});
 	return lines;
 }
