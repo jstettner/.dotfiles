@@ -184,9 +184,11 @@ forwarded to the owning Rex server, so that server needs `chezmoi apply` too.
 `chezmoi apply` installs leaf with its release installer
 (`curl -fsSL https://leaf.dipxsy.app | sh`, into `~/.local/bin`) when it's missing.
 
-`chezmoi apply` installs leaf's `leaf`, `leaf-plan` and `leaf-review` skills into
+`chezmoi apply` installs leaf's `leaf` and `leaf-review` skills into
 `~/.agents/skills` (Pi) and `~/.claude/skills` (Claude Code), with a note to use
-`leaf-float` in Rex, and reinstalls them when leaf's version changes. It doesn't run
+`leaf-float` in Rex, and reinstalls them when leaf's version changes. It skips
+`leaf-plan`: agents show plans and task documents in neorex instead
+(`show-me/references/open-document.md`), with feedback in the chat. It doesn't run
 `leaf agent setup`, whose plan hooks and blocking Pi tools we don't use. The
 HumanLayer implement skills review each phase this way (`phase-review.md`).
 

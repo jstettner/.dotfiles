@@ -20,10 +20,10 @@ Follow the current repository's instructions (`AGENTS.md`, when present) and its
   absolute `file://` URL (`[View HTML artifact](file:///abs/path/to/repo/.local/tasks/<task>/mockup-x.html)`),
   percent-encoding spaces, never by a relative path, whatever a workflow's example shows: the user previews it by
   Cmd-Shift-clicking the link in Rex, which can't resolve a path relative to the Markdown file. There is no cloud upload,
-  artifact viewer, sidebar, automatic permalink, or automatic workflow advancement; comments come only through leaf
-  reviews (below). Never invent a cloud URL or promise these features.
-- After writing or updating the workflow's document, hand it to the user for review in leaf and end the turn; the
-  verdict arrives as the next message: follow `~/.pi/agent/skills/show-me/references/review-document.md`.
+  artifact viewer, sidebar, comment tool, automatic permalink, or automatic workflow advancement.
+  Never invent a cloud URL or promise these features.
+- After writing or updating the workflow's document, show it in the Rex pane to the right of the agent, reusing
+  the document pane already open: follow `~/.pi/agent/skills/show-me/references/open-document.md`.
 - Read required files completely, continuing with offsets if a tool truncates its output. Use Pi's `read`
   tool for file contents, `bash` for file operations, and `edit` for targeted document changes.
 

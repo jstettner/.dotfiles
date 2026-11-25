@@ -6,8 +6,9 @@
 {{- end }}
 # leaf: {{ if $leaf }}{{ output $leaf "version" | trim }}{{ else }}not installed{{ end }}
 #
-# Installs leaf's agent skills (leaf, leaf-plan, leaf-review) for Pi (~/.agents/skills) and
-# Claude Code (~/.claude/skills), each with a note to float its pane with leaf-float in Rex.
+# Installs leaf's agent skills (leaf, leaf-review) for Pi (~/.agents/skills) and Claude Code
+# (~/.claude/skills), each with a note to float its pane with leaf-float in Rex. leaf-plan is left out
+# (and removed): plans and task documents are shown in neorex instead (show-me/references/open-document.md).
 # Not `leaf agent setup`: that also adds plan hooks and a blocking Pi extension, which we skip.
 # On macOS it also runs `leaf rex install` once; modify_init.lua keeps the block it adds.
 {{ template "path.sh" . }}
@@ -26,12 +27,18 @@ float_note() {
 ## Floating panes in Rex (this machine's setup)
 
 When `$REX_BLOCK` is set and `leaf-float` is on `PATH`, open screens over this tab rather than in a split:
-`leaf-float open notes.md`, `leaf-float diff --branch`, `leaf-float review …`, `leaf-float plan plan.md`. It takes
-leaf's arguments, returns at once, and replaces the floating pane it opened before. `leaf-float close` closes it.
+`leaf-float open notes.md`, `leaf-float diff --branch`, `leaf-float review …`. It takes leaf's arguments, returns at
+once, and replaces the floating pane it opened before. `leaf-float close` closes it.
+
+## Plans and documents: not leaf (this machine's setup)
+
+Don't hand plans, specs or task documents to the person with `leaf plan`; there is no `leaf-plan` skill here. Show
+them in neorex instead, as `~/.pi/agent/skills/show-me/references/open-document.md` describes, and take feedback in
+the chat. leaf is still for diffs and code review (`leaf review`, `leaf diff`).
 EOF
       ;;
-    leaf-plan | leaf-review)
-      local sub=${1#leaf-}
+    leaf-review)
+      local sub=review
       cat <<EOF
 
 ## In Rex: float it (this machine's setup)
@@ -46,7 +53,11 @@ EOF
   esac
 }
 
-for name in leaf leaf-plan leaf-review; do
+for root in "$HOME/.agents/skills" "$HOME/.claude/skills"; do
+  rm -rf "$root/leaf-plan"
+done
+
+for name in leaf leaf-review; do
   for root in "$HOME/.agents/skills" "$HOME/.claude/skills"; do
     mkdir -p "$root/$name"
     tmp=$(mktemp "$root/$name/.SKILL.md.XXXXXX")
