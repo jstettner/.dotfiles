@@ -1,2 +1,3 @@
 .claude/hooks/rex-session-start.sh
 .config/rex/annotate
+.pi/agent/skills/show-me/references/open-document.md
