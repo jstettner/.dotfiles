@@ -110,7 +110,7 @@ def main(argv):
         if sub == "close":
             return
         if not LEAF:
-            fail("leaf isn't installed (cargo install leaf-reader)")
+            fail("leaf isn't installed: run chezmoi apply, or curl -fsSL https://leaf.dipxsy.app | sh")
         os.execv(LEAF, [LEAF, sub, *rest])
 
     if sub == "close":
@@ -118,7 +118,7 @@ def main(argv):
         print(f"Closed {closed}." if closed else "No floating leaf pane was open.")
         return
     if not LEAF:
-        fail("leaf isn't installed here (cargo install leaf-reader)")
+        fail("leaf isn't installed here: run chezmoi apply, or curl -fsSL https://leaf.dipxsy.app | sh")
 
     target = json.loads(rex("block", "inspect", agent, "--json").stdout)
     window = target["block"].get("window_id")

@@ -180,8 +180,9 @@ leaf-float close                         # close this agent's floating pane
 Each agent pane has one floating leaf pane: opening another closes the earlier one
 (leaf keeps unsent notes as drafts). `Cmd+O` reviews the focused agent's working
 tree, `Cmd+Shift+O` its branch against its base. For remote panes the action is
-forwarded to the owning Rex server, so this config, `leaf-float` and leaf must be
-installed there too.
+forwarded to the owning Rex server, so that server needs `chezmoi apply` too.
+`chezmoi apply` installs leaf with its release installer
+(`curl -fsSL https://leaf.dipxsy.app | sh`, into `~/.local/bin`) when it's missing.
 
 `chezmoi apply` installs leaf's `leaf`, `leaf-plan` and `leaf-review` skills into
 `~/.agents/skills` (Pi) and `~/.claude/skills` (Claude Code), with a note to use
