@@ -7,10 +7,6 @@
 import { homedir } from "node:os";
 
 const home = homedir();
-
-/** Seconds a bash command may run when the agent doesn't pass a timeout; it can always pass a longer one. */
-export const DEFAULT_TIMEOUT_SECONDS = 120;
-
 const HOME_ALIASES = ["~", "$HOME", "${HOME}"];
 
 /** Top-level directories that hold everything, or the system. */
