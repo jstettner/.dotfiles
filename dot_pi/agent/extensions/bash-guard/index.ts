@@ -6,11 +6,15 @@
  * - Recursive deletion of the root, a top-level directory, the home directory or one of its directories
  *   (`rm -rf /`, `rm -rf ~/src`, `rm -rf "$HOME"/*`), and any `rm --no-preserve-root`.
  *
+ * It also gives every bash command a timeout when the agent doesn't pass one. pi has no default, so a command
+ * that hangs (waiting on input, the network, or a search this guard didn't catch) runs until someone interrupts
+ * it, and in an unattended session no one does.
+ *
  * Subagents start with `--no-extensions`; pi-subagent passes them this extension through
  * `~/.pi/agent/subagent-extensions`.
  */
 import { type ExtensionAPI, isToolCallEventType } from "@earendil-works/pi-coding-agent";
-import { destructiveRemoval, wholeDiskScan } from "./rules.ts";
+import { DEFAULT_TIMEOUT_SECONDS, destructiveRemoval, wholeDiskScan } from "./rules.ts";
 
 export default function (pi: ExtensionAPI) {
 	pi.on("tool_call", (event) => {
@@ -38,5 +42,7 @@ export default function (pi: ExtensionAPI) {
 					"(`node -p \"require.resolve('<pkg>/package.json')\"`).",
 			};
 		}
+
+		event.input.timeout ??= DEFAULT_TIMEOUT_SECONDS;
 	});
 }
